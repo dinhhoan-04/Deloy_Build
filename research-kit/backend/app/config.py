@@ -31,6 +31,8 @@ class Settings(BaseSettings):
             url = "postgresql+asyncpg://" + url[len("postgres://"):]
         elif url.startswith("postgresql://") and "+asyncpg" not in url:
             url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+        # asyncpg doesn't support 'sslmode'; use 'ssl' instead
+        url = url.replace("sslmode=", "ssl=")
         return url
 
     google_client_id: str
