@@ -1,0 +1,63 @@
+name: Build Chrome Extension
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "research-kit/extension/**"
+      - ".github/workflows/build-extension.yml"
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  build-extension:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: research-kit/extension/package-lock.json
+
+      - name: Install dependencies
+        working-directory: research-kit/extension
+        run: npm ci
+
+      - name: Build extension
+        working-directory: research-kit/extension
+        env:
+          VITE_API_URL: https://api.${{ vars.DOMAIN_NAME }}/v1
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+        run: npm run build
+
+      - name: Package extension artifact
+        working-directory: research-kit/extension
+        run: |
+          cd dist
+          zip -r ../../extension-dist.zip .
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-kit-extension
+          path: research-kit/extension-dist.zip
+
+      - name: Build summary
+        run: |
+          {
+            echo "## Extension build complete"
+            echo
+            echo "- API URL: \`https://api.${{ vars.DOMAIN_NAME }}/v1\`"
+            echo "- Artifact: \`research-kit-extension\`"
+          } >> "$GITHUB_STEP_SUMMARY"

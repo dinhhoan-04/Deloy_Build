@@ -1,0 +1,96 @@
+name: Bootstrap AWS Infrastructure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: research-kit/infra/aws/terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials with OIDC
+        if: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS credentials with access keys
+        if: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform apply
+        env:
+          TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'research-kit' }}
+          TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_db_instance_class: ${{ vars.DB_INSTANCE_CLASS || 'db.t4g.micro' }}
+          TF_VAR_ecs_task_cpu: ${{ vars.ECS_TASK_CPU || '512' }}
+          TF_VAR_ecs_task_memory: ${{ vars.ECS_TASK_MEMORY || '1024' }}
+          TF_VAR_ecs_desired_count: ${{ vars.ECS_DESIRED_COUNT || '1' }}
+          TF_VAR_redis_node_type: ${{ vars.REDIS_NODE_TYPE || 'cache.t4g.micro' }}
+          TF_VAR_create_elasticache: ${{ vars.CREATE_ELASTICACHE || 'false' }}
+          TF_VAR_external_redis_url: ${{ secrets.EXTERNAL_REDIS_URL }}
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_google_api_key: ${{ secrets.GOOGLE_API_KEY }}
+          TF_VAR_zai_api_key: ${{ secrets.ZAI_API_KEY }}
+          TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
+          TF_VAR_rk_mcp_token: ${{ secrets.RK_MCP_TOKEN }}
+          TF_VAR_llm_primary_provider: ${{ vars.LLM_PRIMARY_PROVIDER || 'openai' }}
+          TF_VAR_llm_gemini_model: ${{ vars.LLM_GEMINI_MODEL || 'gemini-2.5-flash' }}
+          TF_VAR_llm_zai_model: ${{ vars.LLM_ZAI_MODEL || 'glm-4.7' }}
+          TF_VAR_llm_openai_model: ${{ vars.LLM_OPENAI_MODEL || 'gpt-4o-mini' }}
+          TF_VAR_log_level: ${{ vars.LOG_LEVEL || 'INFO' }}
+        run: terraform apply -auto-approve
+
+      - name: Collect Terraform outputs
+        run: terraform output -json > tf-outputs.json
+
+      - name: Upload Terraform outputs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-outputs
+          path: research-kit/infra/aws/terraform/tf-outputs.json
+
+      - name: Print setup summary
+        run: |
+          {
+            echo "## AWS bootstrap complete"
+            echo
+            echo "Next:"
+            echo "1. Open the \`terraform-outputs\` artifact from this run."
+            echo "2. Copy the \`github_actions_repository_variables\` map into GitHub Repository Variables."
+            echo "3. Add either:"
+            echo "   - \`AWS_GITHUB_DEPLOY_ROLE_ARN\` for OIDC, or"
+            echo "   - \`AWS_ACCESS_KEY_ID\` and \`AWS_SECRET_ACCESS_KEY\` as GitHub Secrets."
+            echo "4. Run the \`Deploy Backend to ECS\` workflow."
+            echo "5. Run the \`Deploy Landing to S3 and CloudFront\` workflow."
+            echo "6. Run the \`Build Chrome Extension\` workflow."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,13 +1,13 @@
 # Research Kit Deployment Guide
 
-The repository is now prepared for an `AWS ECS/Fargate` deployment.
+The repository is now prepared for an `AWS ECS/Fargate` deployment driven from `GitHub`.
 
 ## Target stack
 
 - Backend: `Amazon ECS` using the `Fargate` launch type
 - Public API entrypoint: `Application Load Balancer`
 - Database: `Amazon RDS for PostgreSQL`
-- Redis: `Amazon ElastiCache for Redis OSS` or an `external Redis URL`
+- Redis: `Amazon ElastiCache for Redis OSS` or an external Redis URL
 - Landing page: `S3 + CloudFront`
 - Secrets: `AWS Secrets Manager`
 - Registry: `Amazon ECR`
@@ -22,11 +22,6 @@ As of `May 17, 2026`, this design is only `free-tier friendly`, not fully free:
 - `RDS` can fit AWS Free Tier eligibility or credits depending on your account type.
 - `ElastiCache` is the easiest part to cut if you want to preserve credits.
 
-For the cheapest setup, keep:
-
-- `create_elasticache = false`
-- `external_redis_url = rediss://...`
-
 References:
 
 - AWS Free Tier overview: https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier.html
@@ -35,6 +30,45 @@ References:
 - ElastiCache pricing: https://aws.amazon.com/elasticache/pricing/
 - ELB pricing: https://aws.amazon.com/elasticloadbalancing/pricing/
 
+## End-to-end GitHub flow
+
+1. Push the repo to GitHub.
+2. Add GitHub repository secrets for AWS credentials and app secrets.
+3. Add the basic GitHub repository variables such as `DOMAIN_NAME` and `AWS_REGION`.
+4. Run `.github/workflows/bootstrap-aws.yml`.
+5. Read the `terraform-outputs` artifact from that workflow.
+6. Copy the `github_actions_repository_variables` output into GitHub Repository Variables.
+7. Run `.github/workflows/deploy-backend.yml`.
+8. Run `.github/workflows/deploy-landing.yml`.
+9. Run `.github/workflows/build-extension.yml`.
+
+## Required GitHub secrets
+
+- `AWS_GITHUB_DEPLOY_ROLE_ARN` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`
+- `GOOGLE_CLIENT_ID`
+- `GEMINI_API_KEY`
+- `OPENAI_API_KEY`
+- `GOOGLE_API_KEY`
+- `ZAI_API_KEY`
+- `EXTERNAL_REDIS_URL` if you keep Redis outside AWS
+- `SESSION_SECRET`
+- `RK_MCP_TOKEN`
+
+## Required GitHub variables before bootstrap
+
+- `DOMAIN_NAME`
+- `AWS_REGION`
+- `PROJECT_NAME`
+- `CREATE_ELASTICACHE`
+- `ECS_TASK_CPU`
+- `ECS_TASK_MEMORY`
+- `ECS_DESIRED_COUNT`
+- `LLM_PRIMARY_PROVIDER`
+- `LLM_GEMINI_MODEL`
+- `LLM_ZAI_MODEL`
+- `LLM_OPENAI_MODEL`
+- `LOG_LEVEL`
+
 ## What changed in this repo
 
 - The backend container no longer runs migrations during normal startup.
@@ -42,9 +76,9 @@ References:
 - Extension API calls now use a shared env-driven config module instead of hardcoded Render URLs.
 - Extension host permissions now inject the API origin from `VITE_API_URL` at build time.
 - AWS infrastructure and deployment scripts live under `research-kit/infra/aws/`.
-- The AWS compute path now targets `ECS/Fargate`, not App Runner.
+- GitHub Actions workflows now cover bootstrap, backend deploy, landing deploy, and extension build.
 
-## Main commands
+## Main local fallback commands
 
 ```bash
 cd research-kit/infra/aws/terraform
@@ -52,29 +86,21 @@ terraform init
 terraform apply
 
 cd ..
-AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./build-and-push-backend.sh
 AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./run-backend-migrations.sh
 AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./deploy-ecs-service.sh
 AWS_REGION=ap-southeast-1 ./sync-landing.sh
 VITE_API_URL=https://api.<your-domain>/v1 VITE_GOOGLE_CLIENT_ID=<google-client-id> ./build-extension.sh
 ```
 
-## Git-first deploy path
-
-If your laptop does not have Docker, use the GitHub Actions workflow in `.github/workflows/deploy-backend.yml`.
-
-The intended flow is:
-
-1. Run Terraform once to create AWS infrastructure.
-2. Run the first ECS deployment once so the ECS service and task definition exist.
-3. Push code to `main`.
-4. GitHub Actions builds the backend image, pushes it to ECR, and updates ECS.
-
 ## Files to use
 
 - [research-kit/infra/aws/README.md](./research-kit/infra/aws/README.md)
 - [research-kit/infra/aws/terraform/terraform.tfvars.example](./research-kit/infra/aws/terraform/terraform.tfvars.example)
-- [research-kit/infra/aws/build-and-push-backend.sh](./research-kit/infra/aws/build-and-push-backend.sh)
-- [research-kit/infra/aws/run-backend-migrations.sh](./research-kit/infra/aws/run-backend-migrations.sh)
+- [research-kit/infra/aws/terraform/outputs.tf](./research-kit/infra/aws/terraform/outputs.tf)
 - [research-kit/infra/aws/deploy-ecs-service.sh](./research-kit/infra/aws/deploy-ecs-service.sh)
+- [research-kit/infra/aws/run-backend-migrations.sh](./research-kit/infra/aws/run-backend-migrations.sh)
 - [research-kit/infra/aws/sync-landing.sh](./research-kit/infra/aws/sync-landing.sh)
+- [.github/workflows/bootstrap-aws.yml](./.github/workflows/bootstrap-aws.yml)
+- [.github/workflows/deploy-backend.yml](./.github/workflows/deploy-backend.yml)
+- [.github/workflows/deploy-landing.yml](./.github/workflows/deploy-landing.yml)
+- [.github/workflows/build-extension.yml](./.github/workflows/build-extension.yml)

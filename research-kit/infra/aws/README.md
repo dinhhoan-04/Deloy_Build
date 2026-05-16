@@ -30,86 +30,67 @@ Important:
 - `Secrets Manager` entries for backend runtime secrets
 - `S3 + ACM + CloudFront + Route 53` for the landing page
 
-## Files
+## GitHub workflows
 
-- `terraform/`: base AWS infrastructure
-- `build-and-push-backend.sh`: build and push the backend image to ECR
-- `run-backend-migrations.sh`: run `alembic upgrade head` as a one-off ECS task
-- `deploy-ecs-service.sh`: register the task definition and create or update the ECS service
-- `sync-landing.sh`: upload the landing page to S3 and invalidate CloudFront
-- `build-extension.sh`: build the Chrome extension against the AWS API domain
-- `../../.github/workflows/deploy-backend.yml`: GitHub Actions workflow for backend deploys without local Docker
+- `.github/workflows/bootstrap-aws.yml`: run Terraform from GitHub Actions
+- `.github/workflows/deploy-backend.yml`: build backend image, run migrations, create or update ECS
+- `.github/workflows/deploy-landing.yml`: sync landing page to S3 and invalidate CloudFront
+- `.github/workflows/build-extension.yml`: build the Chrome extension and upload it as an artifact
 
-## Bootstrap sequence
+## End-to-end plan
 
-1. Copy `terraform/terraform.tfvars.example` to `terraform.tfvars` or export `TF_VAR_*` variables.
-2. Set Redis mode:
-   - Cheapest: keep `create_elasticache = false` and provide `external_redis_url`
-   - Full AWS: set `create_elasticache = true`
-3. Run:
+1. Push this repo to GitHub.
+2. Add GitHub repository secrets:
+   - `AWS_GITHUB_DEPLOY_ROLE_ARN` or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`
+   - `GOOGLE_CLIENT_ID`
+   - `GEMINI_API_KEY`
+   - `OPENAI_API_KEY`
+   - `GOOGLE_API_KEY`
+   - `ZAI_API_KEY`
+   - `EXTERNAL_REDIS_URL` if `create_elasticache = false`
+   - `SESSION_SECRET`
+   - `RK_MCP_TOKEN`
+3. Add GitHub repository variables before bootstrap:
+   - `DOMAIN_NAME`
+   - `AWS_REGION=ap-southeast-1`
+   - `PROJECT_NAME=research-kit`
+   - `CREATE_ELASTICACHE=false`
+   - `ECS_TASK_CPU=512`
+   - `ECS_TASK_MEMORY=1024`
+   - `ECS_DESIRED_COUNT=1`
+   - `LLM_PRIMARY_PROVIDER=openai`
+   - `LLM_GEMINI_MODEL=gemini-2.5-flash`
+   - `LLM_ZAI_MODEL=glm-4.7`
+   - `LLM_OPENAI_MODEL=gpt-4o-mini`
+   - `LOG_LEVEL=INFO`
+4. Run the `Bootstrap AWS Infrastructure` workflow.
+5. Open the `terraform-outputs` artifact from that workflow and copy the `github_actions_repository_variables` map into GitHub Repository Variables.
+6. Run the `Deploy Backend to ECS` workflow.
+7. Run the `Deploy Landing to S3 and CloudFront` workflow.
+8. Run the `Build Chrome Extension` workflow and download the artifact.
+
+## Manual fallback
+
+If you prefer to bootstrap from AWS CloudShell instead of GitHub Actions:
 
 ```bash
 cd research-kit/infra/aws/terraform
 terraform init
 terraform apply
-```
 
-4. Build and push the backend image:
-
-```bash
 cd ..
-AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./build-and-push-backend.sh
-```
-
-5. Run DB migrations:
-
-```bash
 AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./run-backend-migrations.sh
-```
-
-6. Deploy the ECS service:
-
-```bash
 AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./deploy-ecs-service.sh
-```
-
-7. Publish the landing page:
-
-```bash
 AWS_REGION=ap-southeast-1 ./sync-landing.sh
 ```
 
-8. Build the extension:
+## Terraform outputs you will use
 
-```bash
-VITE_API_URL=https://api.example.com/v1 \
-VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com \
-./build-extension.sh
-```
+The most important output after `terraform apply` is:
 
-## GitHub Actions deploys
+- `github_actions_repository_variables`
 
-After the first manual bootstrap, backend deploys can run from GitHub instead of your laptop.
-
-Required GitHub secret:
-
-- `AWS_GITHUB_DEPLOY_ROLE_ARN`
-
-Required GitHub repository variables:
-
-- `AWS_REGION`
-- `ECR_REPOSITORY`
-- `ECS_CLUSTER`
-- `ECS_SERVICE`
-- `ECS_CONTAINER_NAME`
-
-The workflow is in `.github/workflows/deploy-backend.yml` and does this:
-
-1. Build the backend image on a GitHub runner
-2. Push the image to ECR
-3. Read the current ECS task definition
-4. Replace only the image tag
-5. Deploy the new revision to ECS
+That output contains the exact GitHub Variables required by the backend and landing deploy workflows.
 
 ## Secrets and environment values
 
@@ -125,7 +106,7 @@ Terraform creates Secrets Manager entries for:
 - `ZAI_API_KEY`
 - `RK_MCP_TOKEN`
 
-The ECS task also receives plain runtime values:
+The ECS task receives plain runtime values for:
 
 - `ENV=production`
 - `LOG_LEVEL`
@@ -137,6 +118,7 @@ The ECS task also receives plain runtime values:
 ## Notes
 
 - The backend image no longer runs migrations on startup. Runtime uses `/app/scripts/run-backend.sh`, and migrations use `/app/scripts/run-migrations.sh`.
+- The deploy workflow can create the ECS service on the first run; it no longer assumes the service already exists.
 - The extension build injects the API host permission from `VITE_API_URL` at build time.
 - The API certificate is created in the same region as the ALB.
 - The landing page certificate is issued in `us-east-1` because CloudFront requires ACM certificates from that region.

@@ -2,6 +2,12 @@ name: Deploy Backend to ECS
 
 on:
   workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: "Run alembic migrations before updating the ECS service"
+        required: false
+        default: true
+        type: boolean
   push:
     branches:
       - main
@@ -22,6 +28,30 @@ env:
   ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
   ECS_SERVICE: ${{ vars.ECS_SERVICE }}
   ECS_CONTAINER_NAME: ${{ vars.ECS_CONTAINER_NAME || 'backend' }}
+  ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
+  ECS_TASK_EXECUTION_ROLE_ARN: ${{ vars.ECS_TASK_EXECUTION_ROLE_ARN }}
+  ECS_TASK_ROLE_ARN: ${{ vars.ECS_TASK_ROLE_ARN }}
+  ECS_TASK_CPU: ${{ vars.ECS_TASK_CPU || '512' }}
+  ECS_TASK_MEMORY: ${{ vars.ECS_TASK_MEMORY || '1024' }}
+  ECS_DESIRED_COUNT: ${{ vars.ECS_DESIRED_COUNT || '1' }}
+  ECS_SUBNET_IDS_JSON: ${{ vars.ECS_SUBNET_IDS_JSON }}
+  ECS_SECURITY_GROUP_ID: ${{ vars.ECS_SECURITY_GROUP_ID }}
+  ALB_TARGET_GROUP_ARN: ${{ vars.ALB_TARGET_GROUP_ARN }}
+  BACKEND_LOG_GROUP_NAME: ${{ vars.BACKEND_LOG_GROUP_NAME }}
+  DATABASE_URL_SECRET_ARN: ${{ vars.DATABASE_URL_SECRET_ARN }}
+  REDIS_URL_SECRET_ARN: ${{ vars.REDIS_URL_SECRET_ARN }}
+  SESSION_SECRET_ARN: ${{ vars.SESSION_SECRET_ARN }}
+  GOOGLE_CLIENT_ID_SECRET_ARN: ${{ vars.GOOGLE_CLIENT_ID_SECRET_ARN }}
+  GEMINI_API_KEY_SECRET_ARN: ${{ vars.GEMINI_API_KEY_SECRET_ARN }}
+  OPENAI_API_KEY_SECRET_ARN: ${{ vars.OPENAI_API_KEY_SECRET_ARN }}
+  GOOGLE_API_KEY_SECRET_ARN: ${{ vars.GOOGLE_API_KEY_SECRET_ARN }}
+  ZAI_API_KEY_SECRET_ARN: ${{ vars.ZAI_API_KEY_SECRET_ARN }}
+  RK_MCP_TOKEN_SECRET_ARN: ${{ vars.RK_MCP_TOKEN_SECRET_ARN }}
+  LOG_LEVEL: ${{ vars.LOG_LEVEL || 'INFO' }}
+  LLM_PRIMARY_PROVIDER: ${{ vars.LLM_PRIMARY_PROVIDER || 'openai' }}
+  LLM_GEMINI_MODEL: ${{ vars.LLM_GEMINI_MODEL || 'gemini-2.5-flash' }}
+  LLM_ZAI_MODEL: ${{ vars.LLM_ZAI_MODEL || 'glm-4.7' }}
+  LLM_OPENAI_MODEL: ${{ vars.LLM_OPENAI_MODEL || 'gpt-4o-mini' }}
 
 jobs:
   deploy:
@@ -31,10 +61,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials with OIDC
+        if: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS credentials with access keys
+        if: ${{ secrets.AWS_GITHUB_DEPLOY_ROLE_ARN == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -54,41 +93,174 @@ jobs:
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Export current ECS task definition
+      - name: Generate ECS task definition
         run: |
-          TASK_DEF_ARN="$(aws ecs describe-services \
+          jq -n \
+            --arg family "$ECS_TASK_FAMILY" \
+            --arg executionRoleArn "$ECS_TASK_EXECUTION_ROLE_ARN" \
+            --arg taskRoleArn "$ECS_TASK_ROLE_ARN" \
+            --arg cpu "$ECS_TASK_CPU" \
+            --arg memory "$ECS_TASK_MEMORY" \
+            --arg logGroup "$BACKEND_LOG_GROUP_NAME" \
+            --arg awsRegion "$AWS_REGION" \
+            --arg containerName "$ECS_CONTAINER_NAME" \
+            --arg image "${{ steps.build-image.outputs.image }}" \
+            --arg logLevel "$LOG_LEVEL" \
+            --arg primaryProvider "$LLM_PRIMARY_PROVIDER" \
+            --arg geminiModel "$LLM_GEMINI_MODEL" \
+            --arg zaiModel "$LLM_ZAI_MODEL" \
+            --arg openaiModel "$LLM_OPENAI_MODEL" \
+            --arg databaseUrlSecretArn "$DATABASE_URL_SECRET_ARN" \
+            --arg redisUrlSecretArn "$REDIS_URL_SECRET_ARN" \
+            --arg sessionSecretArn "$SESSION_SECRET_ARN" \
+            --arg googleClientIdSecretArn "$GOOGLE_CLIENT_ID_SECRET_ARN" \
+            --arg geminiApiKeySecretArn "$GEMINI_API_KEY_SECRET_ARN" \
+            --arg openaiApiKeySecretArn "$OPENAI_API_KEY_SECRET_ARN" \
+            --arg googleApiKeySecretArn "$GOOGLE_API_KEY_SECRET_ARN" \
+            --arg zaiApiKeySecretArn "$ZAI_API_KEY_SECRET_ARN" \
+            --arg rkMcpTokenSecretArn "$RK_MCP_TOKEN_SECRET_ARN" \
+            '{
+              family: $family,
+              networkMode: "awsvpc",
+              requiresCompatibilities: ["FARGATE"],
+              cpu: $cpu,
+              memory: $memory,
+              executionRoleArn: $executionRoleArn,
+              taskRoleArn: $taskRoleArn,
+              containerDefinitions: [
+                {
+                  name: $containerName,
+                  image: $image,
+                  essential: true,
+                  portMappings: [
+                    {
+                      containerPort: 8000,
+                      hostPort: 8000,
+                      protocol: "tcp"
+                    }
+                  ],
+                  environment: [
+                    { name: "ENV", value: "production" },
+                    { name: "LOG_LEVEL", value: $logLevel },
+                    { name: "LLM_PRIMARY_PROVIDER", value: $primaryProvider },
+                    { name: "LLM_GEMINI_MODEL", value: $geminiModel },
+                    { name: "LLM_ZAI_MODEL", value: $zaiModel },
+                    { name: "LLM_OPENAI_MODEL", value: $openaiModel }
+                  ],
+                  secrets: [
+                    { name: "DATABASE_URL", valueFrom: $databaseUrlSecretArn },
+                    { name: "REDIS_URL", valueFrom: $redisUrlSecretArn },
+                    { name: "SESSION_SECRET", valueFrom: $sessionSecretArn },
+                    { name: "GOOGLE_CLIENT_ID", valueFrom: $googleClientIdSecretArn },
+                    { name: "GEMINI_API_KEY", valueFrom: $geminiApiKeySecretArn },
+                    { name: "OPENAI_API_KEY", valueFrom: $openaiApiKeySecretArn },
+                    { name: "GOOGLE_API_KEY", valueFrom: $googleApiKeySecretArn },
+                    { name: "ZAI_API_KEY", valueFrom: $zaiApiKeySecretArn },
+                    { name: "RK_MCP_TOKEN", valueFrom: $rkMcpTokenSecretArn }
+                  ],
+                  logConfiguration: {
+                    logDriver: "awslogs",
+                    options: {
+                      "awslogs-group": $logGroup,
+                      "awslogs-region": $awsRegion,
+                      "awslogs-stream-prefix": "backend"
+                    }
+                  }
+                }
+              ]
+            }' > task-definition.json
+
+      - name: Register ECS task definition
+        id: task-def
+        run: |
+          TASK_DEFINITION_ARN="$(aws ecs register-task-definition \
+            --region "$AWS_REGION" \
+            --cli-input-json file://task-definition.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)"
+          echo "task_definition_arn=$TASK_DEFINITION_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Run DB migrations
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_migrations }}
+        run: |
+          NETWORK_CONFIGURATION="$(jq -cn \
+            --argjson subnets "$ECS_SUBNET_IDS_JSON" \
+            --arg sg "$ECS_SECURITY_GROUP_ID" \
+            '{awsvpcConfiguration:{subnets:$subnets,securityGroups:[$sg],assignPublicIp:"ENABLED"}}')"
+
+          TASK_ARN="$(aws ecs run-task \
+            --region "$AWS_REGION" \
             --cluster "$ECS_CLUSTER" \
-            --services "$ECS_SERVICE" \
-            --query 'services[0].taskDefinition' \
+            --launch-type FARGATE \
+            --task-definition "${{ steps.task-def.outputs.task_definition_arn }}" \
+            --network-configuration "$NETWORK_CONFIGURATION" \
+            --overrides "{\"containerOverrides\":[{\"name\":\"$ECS_CONTAINER_NAME\",\"command\":[\"/app/scripts/run-migrations.sh\"]}]}" \
+            --query 'tasks[0].taskArn' \
             --output text)"
 
-          aws ecs describe-task-definition \
-            --task-definition "$TASK_DEF_ARN" \
-            --query 'taskDefinition' \
-            > task-definition-full.json
+          aws ecs wait tasks-stopped \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN"
 
-          jq 'del(
-            .taskDefinitionArn,
-            .revision,
-            .status,
-            .requiresAttributes,
-            .compatibilities,
-            .registeredAt,
-            .registeredBy
-          )' task-definition-full.json > task-definition.json
+          EXIT_CODE="$(aws ecs describe-tasks \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)"
 
-      - name: Render new task definition
-        id: task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: ${{ env.ECS_CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration task failed with exit code $EXIT_CODE" >&2
+            exit 1
+          fi
 
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
-        with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          cluster: ${{ env.ECS_CLUSTER }}
-          service: ${{ env.ECS_SERVICE }}
-          wait-for-service-stability: true
+      - name: Create or update ECS service
+        run: |
+          NETWORK_CONFIGURATION="$(jq -cn \
+            --argjson subnets "$ECS_SUBNET_IDS_JSON" \
+            --arg sg "$ECS_SECURITY_GROUP_ID" \
+            '{awsvpcConfiguration:{subnets:$subnets,securityGroups:[$sg],assignPublicIp:"ENABLED"}}')"
+
+          SERVICE_COUNT="$(aws ecs describe-services \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'length(services)' \
+            --output text)"
+
+          if [ "$SERVICE_COUNT" = "0" ]; then
+            aws ecs create-service \
+              --region "$AWS_REGION" \
+              --cluster "$ECS_CLUSTER" \
+              --service-name "$ECS_SERVICE" \
+              --task-definition "${{ steps.task-def.outputs.task_definition_arn }}" \
+              --desired-count "$ECS_DESIRED_COUNT" \
+              --launch-type FARGATE \
+              --health-check-grace-period-seconds 30 \
+              --network-configuration "$NETWORK_CONFIGURATION" \
+              --load-balancers "targetGroupArn=$ALB_TARGET_GROUP_ARN,containerName=$ECS_CONTAINER_NAME,containerPort=8000"
+          else
+            aws ecs update-service \
+              --region "$AWS_REGION" \
+              --cluster "$ECS_CLUSTER" \
+              --service "$ECS_SERVICE" \
+              --task-definition "${{ steps.task-def.outputs.task_definition_arn }}" \
+              --desired-count "$ECS_DESIRED_COUNT" \
+              --force-new-deployment
+          fi
+
+          aws ecs wait services-stable \
+            --region "$AWS_REGION" \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+      - name: Deployment summary
+        run: |
+          {
+            echo "## Backend deploy complete"
+            echo
+            echo "- ECS cluster: \`$ECS_CLUSTER\`"
+            echo "- ECS service: \`$ECS_SERVICE\`"
+            echo "- Image tag: \`${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
