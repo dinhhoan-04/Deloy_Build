@@ -35,6 +35,62 @@ jobs:
       - name: Terraform init
         run: terraform init
 
+      - name: Import existing resources
+        env:
+          TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'research-kit' }}
+          TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+          TF_VAR_region: ${{ env.AWS_REGION }}
+          TF_VAR_db_instance_class: ${{ vars.DB_INSTANCE_CLASS || 'db.t4g.micro' }}
+          TF_VAR_db_backup_retention_period: ${{ vars.DB_BACKUP_RETENTION_PERIOD || '0' }}
+          TF_VAR_ecs_task_cpu: ${{ vars.ECS_TASK_CPU || '512' }}
+          TF_VAR_ecs_task_memory: ${{ vars.ECS_TASK_MEMORY || '1024' }}
+          TF_VAR_ecs_desired_count: ${{ vars.ECS_DESIRED_COUNT || '1' }}
+          TF_VAR_redis_node_type: ${{ vars.REDIS_NODE_TYPE || 'cache.t4g.micro' }}
+          TF_VAR_create_elasticache: ${{ vars.CREATE_ELASTICACHE || 'false' }}
+          TF_VAR_create_cloudfront: ${{ vars.CREATE_CLOUDFRONT || 'false' }}
+          TF_VAR_external_redis_url: ${{ secrets.EXTERNAL_REDIS_URL }}
+          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          TF_VAR_google_api_key: ${{ secrets.GOOGLE_API_KEY }}
+          TF_VAR_zai_api_key: ${{ secrets.ZAI_API_KEY }}
+          TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
+          TF_VAR_rk_mcp_token: ${{ secrets.RK_MCP_TOKEN }}
+          TF_VAR_llm_primary_provider: ${{ vars.LLM_PRIMARY_PROVIDER || 'openai' }}
+          TF_VAR_llm_gemini_model: ${{ vars.LLM_GEMINI_MODEL || 'gemini-2.5-flash' }}
+          TF_VAR_llm_zai_model: ${{ vars.LLM_ZAI_MODEL || 'glm-4.7' }}
+          TF_VAR_llm_openai_model: ${{ vars.LLM_OPENAI_MODEL || 'gpt-4o-mini' }}
+          TF_VAR_log_level: ${{ vars.LOG_LEVEL || 'INFO' }}
+        run: |
+          echo "=== Importing existing AWS resources ==="
+
+          # DB Subnet Group
+          terraform import aws_db_subnet_group.postgres research-kit-postgres || true
+
+          # ECR Repository
+          terraform import aws_ecr_repository.backend research-kit-backend || true
+
+          # IAM Roles
+          terraform import aws_iam_role.ecs_task_execution research-kit-ecs-exec || true
+          terraform import aws_iam_role.ecs_task research-kit-ecs-task || true
+
+          # CloudWatch Log Group
+          terraform import aws_cloudwatch_log_group.backend /ecs/research-kit-backend || true
+
+          # ALB (needs ARN)
+          ALB_ARN=$(aws elbv2 describe-load-balancers --names research-kit-api --query "LoadBalancers[0].LoadBalancerArn" --output text 2>/dev/null) || true
+          if [ -n "$ALB_ARN" ] && [ "$ALB_ARN" != "None" ]; then
+            terraform import aws_lb.api "$ALB_ARN" || true
+          fi
+
+          # Target Group (needs ARN)
+          TG_ARN=$(aws elbv2 describe-target-groups --names research-kit-api --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null) || true
+          if [ -n "$TG_ARN" ] && [ "$TG_ARN" != "None" ]; then
+            terraform import aws_lb_target_group.api "$TG_ARN" || true
+          fi
+
+          echo "=== Import complete ==="
+
       - name: Terraform apply
         env:
           TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'research-kit' }}

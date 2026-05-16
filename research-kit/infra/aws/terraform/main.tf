@@ -750,6 +750,8 @@ data "aws_iam_policy_document" "landing_bucket_public" {
 }
 
 resource "aws_s3_bucket_policy" "landing" {
+  depends_on = [aws_s3_bucket_public_access_block.landing]
+
   bucket = aws_s3_bucket.landing.id
   policy = local.use_cloudfront ? data.aws_iam_policy_document.landing_bucket_cloudfront[0].json : data.aws_iam_policy_document.landing_bucket_public[0].json
 }
