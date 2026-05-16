@@ -59,6 +59,17 @@ AWS_REGION=ap-southeast-1 ./sync-landing.sh
 VITE_API_URL=https://api.<your-domain>/v1 VITE_GOOGLE_CLIENT_ID=<google-client-id> ./build-extension.sh
 ```
 
+## Git-first deploy path
+
+If your laptop does not have Docker, use the GitHub Actions workflow in `.github/workflows/deploy-backend.yml`.
+
+The intended flow is:
+
+1. Run Terraform once to create AWS infrastructure.
+2. Run the first ECS deployment once so the ECS service and task definition exist.
+3. Push code to `main`.
+4. GitHub Actions builds the backend image, pushes it to ECR, and updates ECS.
+
 ## Files to use
 
 - [research-kit/infra/aws/README.md](./research-kit/infra/aws/README.md)

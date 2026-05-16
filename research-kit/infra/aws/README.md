@@ -38,6 +38,7 @@ Important:
 - `deploy-ecs-service.sh`: register the task definition and create or update the ECS service
 - `sync-landing.sh`: upload the landing page to S3 and invalidate CloudFront
 - `build-extension.sh`: build the Chrome extension against the AWS API domain
+- `../../.github/workflows/deploy-backend.yml`: GitHub Actions workflow for backend deploys without local Docker
 
 ## Bootstrap sequence
 
@@ -85,6 +86,30 @@ VITE_API_URL=https://api.example.com/v1 \
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com \
 ./build-extension.sh
 ```
+
+## GitHub Actions deploys
+
+After the first manual bootstrap, backend deploys can run from GitHub instead of your laptop.
+
+Required GitHub secret:
+
+- `AWS_GITHUB_DEPLOY_ROLE_ARN`
+
+Required GitHub repository variables:
+
+- `AWS_REGION`
+- `ECR_REPOSITORY`
+- `ECS_CLUSTER`
+- `ECS_SERVICE`
+- `ECS_CONTAINER_NAME`
+
+The workflow is in `.github/workflows/deploy-backend.yml` and does this:
+
+1. Build the backend image on a GitHub runner
+2. Push the image to ECR
+3. Read the current ECS task definition
+4. Replace only the image tag
+5. Deploy the new revision to ECS
 
 ## Secrets and environment values
 
