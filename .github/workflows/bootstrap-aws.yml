@@ -9,6 +9,7 @@ permissions:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
   TF_IN_AUTOMATION: "true"
+  TF_STATE_BUCKET: research-kit-tfstate-${{ vars.AWS_ACCOUNT_ID || '087195661500' }}
 
 jobs:
   bootstrap:
@@ -17,6 +18,32 @@ jobs:
     defaults:
       run:
         working-directory: research-kit/infra/aws/terraform
+
+    env:
+      TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'research-kit' }}
+      TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
+      TF_VAR_region: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
+      TF_VAR_db_instance_class: ${{ vars.DB_INSTANCE_CLASS || 'db.t4g.micro' }}
+      TF_VAR_db_backup_retention_period: ${{ vars.DB_BACKUP_RETENTION_PERIOD || '0' }}
+      TF_VAR_ecs_task_cpu: ${{ vars.ECS_TASK_CPU || '512' }}
+      TF_VAR_ecs_task_memory: ${{ vars.ECS_TASK_MEMORY || '1024' }}
+      TF_VAR_ecs_desired_count: ${{ vars.ECS_DESIRED_COUNT || '1' }}
+      TF_VAR_redis_node_type: ${{ vars.REDIS_NODE_TYPE || 'cache.t4g.micro' }}
+      TF_VAR_create_elasticache: ${{ vars.CREATE_ELASTICACHE || 'false' }}
+      TF_VAR_create_cloudfront: ${{ vars.CREATE_CLOUDFRONT || 'false' }}
+      TF_VAR_external_redis_url: ${{ secrets.EXTERNAL_REDIS_URL }}
+      TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
+      TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+      TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+      TF_VAR_google_api_key: ${{ secrets.GOOGLE_API_KEY }}
+      TF_VAR_zai_api_key: ${{ secrets.ZAI_API_KEY }}
+      TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
+      TF_VAR_rk_mcp_token: ${{ secrets.RK_MCP_TOKEN }}
+      TF_VAR_llm_primary_provider: ${{ vars.LLM_PRIMARY_PROVIDER || 'openai' }}
+      TF_VAR_llm_gemini_model: ${{ vars.LLM_GEMINI_MODEL || 'gemini-2.5-flash' }}
+      TF_VAR_llm_zai_model: ${{ vars.LLM_ZAI_MODEL || 'glm-4.7' }}
+      TF_VAR_llm_openai_model: ${{ vars.LLM_OPENAI_MODEL || 'gpt-4o-mini' }}
+      TF_VAR_log_level: ${{ vars.LOG_LEVEL || 'INFO' }}
 
     steps:
       - name: Checkout
@@ -31,66 +58,146 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Create Terraform state bucket (if not exists)
+        run: |
+          if ! aws s3api head-bucket --bucket "$TF_STATE_BUCKET" 2>/dev/null; then
+            echo "Creating S3 bucket for Terraform state: $TF_STATE_BUCKET"
+            aws s3api create-bucket \
+              --bucket "$TF_STATE_BUCKET" \
+              --region "$AWS_REGION" \
+              --create-bucket-configuration LocationConstraint="$AWS_REGION"
+            aws s3api put-bucket-versioning \
+              --bucket "$TF_STATE_BUCKET" \
+              --versioning-configuration Status=Enabled
+            aws s3api put-public-access-block \
+              --bucket "$TF_STATE_BUCKET" \
+              --public-access-block-configuration \
+                BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true
+            echo "State bucket created."
+          else
+            echo "State bucket $TF_STATE_BUCKET already exists."
+          fi
 
       - name: Terraform init
-        run: terraform init
-
-      - name: Import existing resources
-        env:
-          TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'research-kit' }}
-          TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-          TF_VAR_region: ${{ env.AWS_REGION }}
-          TF_VAR_db_instance_class: ${{ vars.DB_INSTANCE_CLASS || 'db.t4g.micro' }}
-          TF_VAR_db_backup_retention_period: ${{ vars.DB_BACKUP_RETENTION_PERIOD || '0' }}
-          TF_VAR_ecs_task_cpu: ${{ vars.ECS_TASK_CPU || '512' }}
-          TF_VAR_ecs_task_memory: ${{ vars.ECS_TASK_MEMORY || '1024' }}
-          TF_VAR_ecs_desired_count: ${{ vars.ECS_DESIRED_COUNT || '1' }}
-          TF_VAR_redis_node_type: ${{ vars.REDIS_NODE_TYPE || 'cache.t4g.micro' }}
-          TF_VAR_create_elasticache: ${{ vars.CREATE_ELASTICACHE || 'false' }}
-          TF_VAR_create_cloudfront: ${{ vars.CREATE_CLOUDFRONT || 'false' }}
-          TF_VAR_external_redis_url: ${{ secrets.EXTERNAL_REDIS_URL }}
-          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
-          TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-          TF_VAR_google_api_key: ${{ secrets.GOOGLE_API_KEY }}
-          TF_VAR_zai_api_key: ${{ secrets.ZAI_API_KEY }}
-          TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
-          TF_VAR_rk_mcp_token: ${{ secrets.RK_MCP_TOKEN }}
-          TF_VAR_llm_primary_provider: ${{ vars.LLM_PRIMARY_PROVIDER || 'openai' }}
-          TF_VAR_llm_gemini_model: ${{ vars.LLM_GEMINI_MODEL || 'gemini-2.5-flash' }}
-          TF_VAR_llm_zai_model: ${{ vars.LLM_ZAI_MODEL || 'glm-4.7' }}
-          TF_VAR_llm_openai_model: ${{ vars.LLM_OPENAI_MODEL || 'gpt-4o-mini' }}
-          TF_VAR_log_level: ${{ vars.LOG_LEVEL || 'INFO' }}
         run: |
-          echo "=== Importing existing AWS resources ==="
+          terraform init \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
+            -backend-config="region=$AWS_REGION"
 
-          # DB Subnet Group
+      - name: Import existing resources (first run only)
+        run: |
+          # Check if state already has resources — skip import if so
+          RESOURCE_COUNT=$(terraform state list 2>/dev/null | wc -l || echo "0")
+          if [ "$RESOURCE_COUNT" -gt "5" ]; then
+            echo "State already has $RESOURCE_COUNT resources, skipping import."
+            exit 0
+          fi
+
+          echo "=== Importing existing AWS resources into state ==="
+
+          # --- Networking ---
+          VPC_ID=$(aws ec2 describe-vpcs --filters "Name=tag:Name,Values=research-kit-vpc" --query "Vpcs[0].VpcId" --output text 2>/dev/null) || true
+          if [ -n "$VPC_ID" ] && [ "$VPC_ID" != "None" ]; then
+            echo "Found VPC: $VPC_ID"
+            terraform import aws_vpc.main "$VPC_ID" || true
+
+            # Internet Gateway
+            IGW_ID=$(aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$VPC_ID" --query "InternetGateways[0].InternetGatewayId" --output text 2>/dev/null) || true
+            if [ -n "$IGW_ID" ] && [ "$IGW_ID" != "None" ]; then
+              terraform import aws_internet_gateway.main "$IGW_ID" || true
+            fi
+
+            # Public Subnets
+            PUB_SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Tier,Values=public" --query "Subnets[*].SubnetId" --output text 2>/dev/null) || true
+            i=0
+            for SID in $PUB_SUBNETS; do
+              terraform import "aws_subnet.public[$i]" "$SID" || true
+              i=$((i+1))
+            done
+
+            # Private Subnets
+            PRIV_SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Tier,Values=private" --query "Subnets[*].SubnetId" --output text 2>/dev/null) || true
+            i=0
+            for SID in $PRIV_SUBNETS; do
+              terraform import "aws_subnet.private[$i]" "$SID" || true
+              i=$((i+1))
+            done
+
+            # Route Tables
+            PUB_RT=$(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=research-kit-public-rt" --query "RouteTables[0].RouteTableId" --output text 2>/dev/null) || true
+            if [ -n "$PUB_RT" ] && [ "$PUB_RT" != "None" ]; then
+              terraform import aws_route_table.public "$PUB_RT" || true
+              # Route table associations
+              i=0
+              for SID in $PUB_SUBNETS; do
+                ASSOC_ID=$(aws ec2 describe-route-tables --route-table-ids "$PUB_RT" --query "RouteTables[0].Associations[?SubnetId=='$SID'].RouteTableAssociationId | [0]" --output text 2>/dev/null) || true
+                if [ -n "$ASSOC_ID" ] && [ "$ASSOC_ID" != "None" ]; then
+                  terraform import "aws_route_table_association.public[$i]" "$SID/$PUB_RT" || true
+                fi
+                i=$((i+1))
+              done
+            fi
+
+            PRIV_RT=$(aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=research-kit-private-rt" --query "RouteTables[0].RouteTableId" --output text 2>/dev/null) || true
+            if [ -n "$PRIV_RT" ] && [ "$PRIV_RT" != "None" ]; then
+              terraform import aws_route_table.private "$PRIV_RT" || true
+              i=0
+              for SID in $PRIV_SUBNETS; do
+                ASSOC_ID=$(aws ec2 describe-route-tables --route-table-ids "$PRIV_RT" --query "RouteTables[0].Associations[?SubnetId=='$SID'].RouteTableAssociationId | [0]" --output text 2>/dev/null) || true
+                if [ -n "$ASSOC_ID" ] && [ "$ASSOC_ID" != "None" ]; then
+                  terraform import "aws_route_table_association.private[$i]" "$SID/$PRIV_RT" || true
+                fi
+                i=$((i+1))
+              done
+            fi
+
+            # Security Groups
+            for SG_NAME in research-kit-alb research-kit-ecs-service research-kit-postgres; do
+              SG_ID=$(aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" "Name=group-name,Values=$SG_NAME" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null) || true
+              if [ -n "$SG_ID" ] && [ "$SG_ID" != "None" ]; then
+                case $SG_NAME in
+                  research-kit-alb)         terraform import aws_security_group.alb "$SG_ID" || true ;;
+                  research-kit-ecs-service) terraform import aws_security_group.ecs_service "$SG_ID" || true ;;
+                  research-kit-postgres)    terraform import aws_security_group.postgres "$SG_ID" || true ;;
+                esac
+              fi
+            done
+          fi
+
+          # --- Database ---
           terraform import aws_db_subnet_group.postgres research-kit-postgres || true
 
-          # ECR Repository
+          DB_ID=$(aws rds describe-db-instances --db-instance-identifier research-kit-postgres --query "DBInstances[0].DBInstanceIdentifier" --output text 2>/dev/null) || true
+          if [ -n "$DB_ID" ] && [ "$DB_ID" != "None" ]; then
+            terraform import aws_db_instance.postgres research-kit-postgres || true
+          fi
+
+          # --- ECR ---
           terraform import aws_ecr_repository.backend research-kit-backend || true
 
-          # IAM Roles
+          # --- IAM ---
           terraform import aws_iam_role.ecs_task_execution research-kit-ecs-exec || true
           terraform import aws_iam_role.ecs_task research-kit-ecs-task || true
 
-          # CloudWatch Log Group
+          # IAM Policy Attachments
+          terraform import aws_iam_role_policy_attachment.ecs_task_execution "research-kit-ecs-exec/arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy" || true
+          terraform import aws_iam_role_policy.ecs_task_execution_secrets "research-kit-ecs-exec:research-kit-ecs-exec-secrets" || true
+
+          # --- CloudWatch ---
           terraform import aws_cloudwatch_log_group.backend /ecs/research-kit-backend || true
 
-          # ALB (needs ARN)
+          # --- ECS ---
+          terraform import aws_ecs_cluster.backend research-kit-backend || true
+
+          # --- ALB ---
           ALB_ARN=$(aws elbv2 describe-load-balancers --names research-kit-api --query "LoadBalancers[0].LoadBalancerArn" --output text 2>/dev/null) || true
           if [ -n "$ALB_ARN" ] && [ "$ALB_ARN" != "None" ]; then
             terraform import aws_lb.api "$ALB_ARN" || true
-          fi
 
-          # Target Group (needs ARN)
-          TG_ARN=$(aws elbv2 describe-target-groups --names research-kit-api --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null) || true
-          if [ -n "$TG_ARN" ] && [ "$TG_ARN" != "None" ]; then
-            terraform import aws_lb_target_group.api "$TG_ARN" || true
-          fi
-
-          # ALB Listeners (must import so TF can manage listener->target group dependency)
-          if [ -n "$ALB_ARN" ] && [ "$ALB_ARN" != "None" ]; then
+            # Listeners
             LISTENERS=$(aws elbv2 describe-listeners --load-balancer-arn "$ALB_ARN" --query "Listeners[*].[ListenerArn,Port]" --output text 2>/dev/null) || true
             if [ -n "$LISTENERS" ]; then
               echo "$LISTENERS" | while read -r LISTENER_ARN LISTENER_PORT; do
@@ -103,47 +210,46 @@ jobs:
             fi
           fi
 
-          # ECS Cluster
-          terraform import aws_ecs_cluster.backend research-kit-backend || true
+          TG_ARN=$(aws elbv2 describe-target-groups --names research-kit-api --query "TargetGroups[0].TargetGroupArn" --output text 2>/dev/null) || true
+          if [ -n "$TG_ARN" ] && [ "$TG_ARN" != "None" ]; then
+            terraform import aws_lb_target_group.api "$TG_ARN" || true
+          fi
 
-          # S3 Bucket
+          # --- S3 ---
           S3_BUCKET=$(aws s3api list-buckets --query "Buckets[?starts_with(Name,'research-kit-landing-')].Name | [0]" --output text 2>/dev/null) || true
           if [ -n "$S3_BUCKET" ] && [ "$S3_BUCKET" != "None" ]; then
             terraform import aws_s3_bucket.landing "$S3_BUCKET" || true
             terraform import aws_s3_bucket_public_access_block.landing "$S3_BUCKET" || true
             terraform import aws_s3_bucket_website_configuration.landing "$S3_BUCKET" || true
             terraform import aws_s3_bucket_ownership_controls.landing "$S3_BUCKET" || true
+
+            # Import random_id.suffix from bucket name suffix
+            SUFFIX=${S3_BUCKET##*-}
+            if [ -n "$SUFFIX" ]; then
+              terraform import random_id.suffix "$SUFFIX" || true
+            fi
           fi
+
+          # --- Secrets Manager ---
+          for SECRET_KEY in database-url redis-url session-secret google-client-id gemini-api-key openai-api-key google-api-key zai-api-key rk-mcp-token; do
+            TF_KEY=$(echo "$SECRET_KEY" | tr '-' '_' | tr '[:lower:]' '[:upper:]')
+            SECRET_ARN=$(aws secretsmanager describe-secret --secret-id "/research-kit/$SECRET_KEY" --query "ARN" --output text 2>/dev/null) || true
+            if [ -n "$SECRET_ARN" ] && [ "$SECRET_ARN" != "None" ]; then
+              terraform import "aws_secretsmanager_secret.backend[\"$TF_KEY\"]" "$SECRET_ARN" || true
+              VERSION_ID=$(aws secretsmanager describe-secret --secret-id "/research-kit/$SECRET_KEY" --query "VersionIdsToStages | keys(@) | [0]" --output text 2>/dev/null) || true
+              if [ -n "$VERSION_ID" ] && [ "$VERSION_ID" != "None" ]; then
+                terraform import "aws_secretsmanager_secret_version.backend[\"$TF_KEY\"]" "$SECRET_ARN|$VERSION_ID" || true
+              fi
+            fi
+          done
 
           echo "=== Import complete ==="
 
+      - name: Terraform plan
+        run: terraform plan -out=tfplan
+
       - name: Terraform apply
-        env:
-          TF_VAR_project_name: ${{ vars.PROJECT_NAME || 'research-kit' }}
-          TF_VAR_domain_name: ${{ vars.DOMAIN_NAME }}
-          TF_VAR_region: ${{ env.AWS_REGION }}
-          TF_VAR_db_instance_class: ${{ vars.DB_INSTANCE_CLASS || 'db.t4g.micro' }}
-          TF_VAR_db_backup_retention_period: ${{ vars.DB_BACKUP_RETENTION_PERIOD || '0' }}
-          TF_VAR_ecs_task_cpu: ${{ vars.ECS_TASK_CPU || '512' }}
-          TF_VAR_ecs_task_memory: ${{ vars.ECS_TASK_MEMORY || '1024' }}
-          TF_VAR_ecs_desired_count: ${{ vars.ECS_DESIRED_COUNT || '1' }}
-          TF_VAR_redis_node_type: ${{ vars.REDIS_NODE_TYPE || 'cache.t4g.micro' }}
-          TF_VAR_create_elasticache: ${{ vars.CREATE_ELASTICACHE || 'false' }}
-          TF_VAR_create_cloudfront: ${{ vars.CREATE_CLOUDFRONT || 'false' }}
-          TF_VAR_external_redis_url: ${{ secrets.EXTERNAL_REDIS_URL }}
-          TF_VAR_google_client_id: ${{ secrets.GOOGLE_CLIENT_ID }}
-          TF_VAR_gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
-          TF_VAR_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-          TF_VAR_google_api_key: ${{ secrets.GOOGLE_API_KEY }}
-          TF_VAR_zai_api_key: ${{ secrets.ZAI_API_KEY }}
-          TF_VAR_session_secret: ${{ secrets.SESSION_SECRET }}
-          TF_VAR_rk_mcp_token: ${{ secrets.RK_MCP_TOKEN }}
-          TF_VAR_llm_primary_provider: ${{ vars.LLM_PRIMARY_PROVIDER || 'openai' }}
-          TF_VAR_llm_gemini_model: ${{ vars.LLM_GEMINI_MODEL || 'gemini-2.5-flash' }}
-          TF_VAR_llm_zai_model: ${{ vars.LLM_ZAI_MODEL || 'glm-4.7' }}
-          TF_VAR_llm_openai_model: ${{ vars.LLM_OPENAI_MODEL || 'gpt-4o-mini' }}
-          TF_VAR_log_level: ${{ vars.LOG_LEVEL || 'INFO' }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan
 
       - name: Collect Terraform outputs
         run: terraform output -json > tf-outputs.json
