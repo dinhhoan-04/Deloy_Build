@@ -37,7 +37,7 @@ jobs:
       - name: Build extension
         working-directory: research-kit/extension
         env:
-          VITE_API_URL: https://api.${{ vars.DOMAIN_NAME }}/v1
+          VITE_API_URL: ${{ vars.API_BASE_URL }}/v1
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: npm run build
 
@@ -58,6 +58,6 @@ jobs:
           {
             echo "## Extension build complete"
             echo
-            echo "- API URL: \`https://api.${{ vars.DOMAIN_NAME }}/v1\`"
+            echo "- API URL: \`${{ vars.API_BASE_URL }}/v1\`"
             echo "- Artifact: \`research-kit-extension\`"
           } >> "$GITHUB_STEP_SUMMARY"

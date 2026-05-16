@@ -1,8 +1,9 @@
 locals {
-  prefix         = lower(replace(var.project_name, "_", "-"))
-  api_domain     = "api.${var.domain_name}"
-  www_domain     = "www.${var.domain_name}"
-  landing_bucket = "${local.prefix}-landing-${random_id.suffix.hex}"
+  prefix            = lower(replace(var.project_name, "_", "-"))
+  has_custom_domain = length(trimspace(var.domain_name)) > 0
+  api_domain        = local.has_custom_domain ? "api.${var.domain_name}" : ""
+  www_domain        = local.has_custom_domain ? "www.${var.domain_name}" : ""
+  landing_bucket    = "${local.prefix}-landing-${random_id.suffix.hex}"
   common_tags = merge({
     Project     = var.project_name
     Environment = "production"
@@ -41,6 +42,8 @@ resource "random_password" "mcp_token" {
 }
 
 resource "aws_route53_zone" "main" {
+  count = local.has_custom_domain ? 1 : 0
+
   name = var.domain_name
   tags = local.common_tags
 }
@@ -389,6 +392,8 @@ resource "aws_ecs_cluster" "backend" {
 }
 
 resource "aws_acm_certificate" "api" {
+  count = local.has_custom_domain ? 1 : 0
+
   domain_name       = local.api_domain
   validation_method = "DNS"
 
@@ -400,15 +405,15 @@ resource "aws_acm_certificate" "api" {
 }
 
 resource "aws_route53_record" "api_cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.api.domain_validation_options : dvo.domain_name => {
+  for_each = local.has_custom_domain ? {
+    for dvo in aws_acm_certificate.api[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-  }
+  } : {}
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60
@@ -416,7 +421,9 @@ resource "aws_route53_record" "api_cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "api" {
-  certificate_arn         = aws_acm_certificate.api.arn
+  count = local.has_custom_domain ? 1 : 0
+
+  certificate_arn         = aws_acm_certificate.api[0].arn
   validation_record_fqdns = [for record in aws_route53_record.api_cert_validation : record.fqdn]
 }
 
@@ -450,7 +457,22 @@ resource "aws_lb_target_group" "api" {
   tags = local.common_tags
 }
 
-resource "aws_lb_listener" "http" {
+resource "aws_lb_listener" "http_forward" {
+  count = local.has_custom_domain ? 0 : 1
+
+  load_balancer_arn = aws_lb.api.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.api.arn
+  }
+}
+
+resource "aws_lb_listener" "http_redirect" {
+  count = local.has_custom_domain ? 1 : 0
+
   load_balancer_arn = aws_lb.api.arn
   port              = 80
   protocol          = "HTTP"
@@ -467,11 +489,13 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener" "https" {
+  count = local.has_custom_domain ? 1 : 0
+
   load_balancer_arn = aws_lb.api.arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  certificate_arn   = aws_acm_certificate_validation.api.certificate_arn
+  certificate_arn   = aws_acm_certificate_validation.api[0].certificate_arn
 
   default_action {
     type             = "forward"
@@ -480,7 +504,9 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_route53_record" "api" {
-  zone_id = aws_route53_zone.main.zone_id
+  count = local.has_custom_domain ? 1 : 0
+
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = local.api_domain
   type    = "A"
 
@@ -572,7 +598,9 @@ resource "aws_cloudfront_origin_access_control" "landing" {
 }
 
 resource "aws_acm_certificate" "landing" {
-  provider                  = aws.us_east_1
+  count    = local.has_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
   domain_name               = var.domain_name
   validation_method         = "DNS"
   subject_alternative_names = [local.www_domain]
@@ -585,15 +613,15 @@ resource "aws_acm_certificate" "landing" {
 }
 
 resource "aws_route53_record" "landing_cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.landing.domain_validation_options : dvo.domain_name => {
+  for_each = local.has_custom_domain ? {
+    for dvo in aws_acm_certificate.landing[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
       type   = dvo.resource_record_type
     }
-  }
+  } : {}
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = each.value.name
   type    = each.value.type
   ttl     = 60
@@ -601,15 +629,17 @@ resource "aws_route53_record" "landing_cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "landing" {
-  provider                = aws.us_east_1
-  certificate_arn         = aws_acm_certificate.landing.arn
+  count    = local.has_custom_domain ? 1 : 0
+  provider = aws.us_east_1
+
+  certificate_arn         = aws_acm_certificate.landing[0].arn
   validation_record_fqdns = [for record in aws_route53_record.landing_cert_validation : record.fqdn]
 }
 
 resource "aws_cloudfront_distribution" "landing" {
   enabled             = true
   default_root_object = "index.html"
-  aliases             = [var.domain_name, local.www_domain]
+  aliases             = local.has_custom_domain ? [var.domain_name, local.www_domain] : []
 
   origin {
     domain_name              = aws_s3_bucket.landing.bucket_regional_domain_name
@@ -654,9 +684,10 @@ resource "aws_cloudfront_distribution" "landing" {
   }
 
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate_validation.landing.certificate_arn
-    ssl_support_method       = "sni-only"
-    minimum_protocol_version = "TLSv1.2_2021"
+    cloudfront_default_certificate = local.has_custom_domain ? false : true
+    acm_certificate_arn            = local.has_custom_domain ? aws_acm_certificate_validation.landing[0].certificate_arn : null
+    ssl_support_method             = local.has_custom_domain ? "sni-only" : null
+    minimum_protocol_version       = "TLSv1.2_2021"
   }
 
   tags = local.common_tags
@@ -689,7 +720,9 @@ resource "aws_s3_bucket_policy" "landing" {
 }
 
 resource "aws_route53_record" "landing_root" {
-  zone_id = aws_route53_zone.main.zone_id
+  count = local.has_custom_domain ? 1 : 0
+
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = var.domain_name
   type    = "A"
 
@@ -701,7 +734,9 @@ resource "aws_route53_record" "landing_root" {
 }
 
 resource "aws_route53_record" "landing_www" {
-  zone_id = aws_route53_zone.main.zone_id
+  count = local.has_custom_domain ? 1 : 0
+
+  zone_id = aws_route53_zone.main[0].zone_id
   name    = local.www_domain
   type    = "A"
 

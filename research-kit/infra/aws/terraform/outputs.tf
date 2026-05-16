@@ -2,16 +2,28 @@ output "region" {
   value = var.region
 }
 
+output "has_custom_domain" {
+  value = local.has_custom_domain
+}
+
 output "api_domain_name" {
   value = local.api_domain
 }
 
+output "api_base_url" {
+  value = local.has_custom_domain ? "https://${local.api_domain}" : "http://${aws_lb.api.dns_name}"
+}
+
+output "landing_base_url" {
+  value = local.has_custom_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.landing.domain_name}"
+}
+
 output "route53_zone_id" {
-  value = aws_route53_zone.main.zone_id
+  value = try(aws_route53_zone.main[0].zone_id, "")
 }
 
 output "route53_name_servers" {
-  value = aws_route53_zone.main.name_servers
+  value = try(aws_route53_zone.main[0].name_servers, [])
 }
 
 output "ecr_repository_url" {
@@ -153,5 +165,8 @@ output "github_actions_repository_variables" {
     LLM_GEMINI_MODEL            = var.llm_gemini_model
     LLM_ZAI_MODEL               = var.llm_zai_model
     LLM_OPENAI_MODEL            = var.llm_openai_model
+    API_BASE_URL                = local.has_custom_domain ? "https://${local.api_domain}" : "http://${aws_lb.api.dns_name}"
+    LANDING_BASE_URL            = local.has_custom_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.landing.domain_name}"
+    DOMAIN_NAME                 = var.domain_name
   }
 }

@@ -10,6 +10,7 @@ This stack is adjusted for a short-lived AWS `Free Tier / credit` setup:
 - Backend tasks run in `public subnets` with a security group that only accepts traffic from the ALB
 - `RDS PostgreSQL` stays private in private subnets
 - `Redis` is optional on AWS because `ElastiCache` can burn credits quickly
+- Custom domains are optional; you can run entirely on AWS-generated URLs
 
 Important:
 
@@ -19,16 +20,16 @@ Important:
 
 ## What Terraform provisions
 
-- Route 53 hosted zone for the root domain
 - VPC with 2 public and 2 private subnets
 - 1 internet gateway
-- Public `Application Load Balancer` for `api.<domain>`
+- Public `Application Load Balancer` for the backend API
 - `ECS cluster` plus IAM roles and CloudWatch log group
 - Private PostgreSQL 16 on `RDS`
 - Optional private Redis OSS on `ElastiCache`
 - `ECR` repository for the backend image
 - `Secrets Manager` entries for backend runtime secrets
-- `S3 + ACM + CloudFront + Route 53` for the landing page
+- `S3 + CloudFront` for the landing page
+- Optional `Route 53 + ACM` only when `domain_name` is set
 
 ## GitHub workflows
 
@@ -51,9 +52,9 @@ Important:
    - `SESSION_SECRET`
    - `RK_MCP_TOKEN`
 3. Add GitHub repository variables before bootstrap:
-   - `DOMAIN_NAME`
    - `AWS_REGION=ap-southeast-1`
    - `PROJECT_NAME=research-kit`
+   - `DOMAIN_NAME=` leave empty for test mode, or set your real domain later
    - `CREATE_ELASTICACHE=false`
    - `ECS_TASK_CPU=512`
    - `ECS_TASK_MEMORY=1024`
@@ -68,6 +69,14 @@ Important:
 6. Run the `Deploy Backend to ECS` workflow.
 7. Run the `Deploy Landing to S3 and CloudFront` workflow.
 8. Run the `Build Chrome Extension` workflow and download the artifact.
+
+## What happens when `domain_name` is empty
+
+- The backend API uses the AWS ALB DNS name:
+  - `http://<alb-name>.<region>.elb.amazonaws.com`
+- The landing page uses the AWS CloudFront domain:
+  - `https://<distribution>.cloudfront.net`
+- The extension build uses `API_BASE_URL` from Terraform outputs, so no custom domain is required
 
 ## Manual fallback
 
@@ -86,11 +95,13 @@ AWS_REGION=ap-southeast-1 ./sync-landing.sh
 
 ## Terraform outputs you will use
 
-The most important output after `terraform apply` is:
+The most important outputs after `terraform apply` are:
 
 - `github_actions_repository_variables`
+- `api_base_url`
+- `landing_base_url`
 
-That output contains the exact GitHub Variables required by the backend and landing deploy workflows.
+Those outputs contain the exact GitHub Variables required by the backend and landing deploy workflows.
 
 ## Secrets and environment values
 
@@ -120,5 +131,4 @@ The ECS task receives plain runtime values for:
 - The backend image no longer runs migrations on startup. Runtime uses `/app/scripts/run-backend.sh`, and migrations use `/app/scripts/run-migrations.sh`.
 - The deploy workflow can create the ECS service on the first run; it no longer assumes the service already exists.
 - The extension build injects the API host permission from `VITE_API_URL` at build time.
-- The API certificate is created in the same region as the ALB.
-- The landing page certificate is issued in `us-east-1` because CloudFront requires ACM certificates from that region.
+- If you set `domain_name` later, the same Terraform stack can add custom DNS and HTTPS without changing your backend logic.

@@ -93,4 +93,8 @@ jobs:
             echo "4. Run the \`Deploy Backend to ECS\` workflow."
             echo "5. Run the \`Deploy Landing to S3 and CloudFront\` workflow."
             echo "6. Run the \`Build Chrome Extension\` workflow."
+            echo
+            echo "If \`DOMAIN_NAME\` was empty, the outputs already contain AWS-generated fallback URLs:"
+            echo "- \`API_BASE_URL\` from the ALB DNS name"
+            echo "- \`LANDING_BASE_URL\` from the CloudFront domain"
           } >> "$GITHUB_STEP_SUMMARY"

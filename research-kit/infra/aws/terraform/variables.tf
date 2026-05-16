@@ -5,8 +5,9 @@ variable "project_name" {
 }
 
 variable "domain_name" {
-  description = "Root domain hosted in Route 53."
+  description = "Optional root domain. Leave empty to use AWS-generated ALB and CloudFront domains."
   type        = string
+  default     = ""
 }
 
 variable "region" {

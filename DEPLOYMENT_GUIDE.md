@@ -11,7 +11,7 @@ The repository is now prepared for an `AWS ECS/Fargate` deployment driven from `
 - Landing page: `S3 + CloudFront`
 - Secrets: `AWS Secrets Manager`
 - Registry: `Amazon ECR`
-- DNS: `Amazon Route 53`
+- Optional DNS: `Amazon Route 53`
 
 ## Free Tier reality
 
@@ -21,6 +21,7 @@ As of `May 17, 2026`, this design is only `free-tier friendly`, not fully free:
 - `ALB` uses credits or pay-as-you-go pricing.
 - `RDS` can fit AWS Free Tier eligibility or credits depending on your account type.
 - `ElastiCache` is the easiest part to cut if you want to preserve credits.
+- Leaving `DOMAIN_NAME` empty avoids domain purchase and custom DNS setup.
 
 References:
 
@@ -34,13 +35,14 @@ References:
 
 1. Push the repo to GitHub.
 2. Add GitHub repository secrets for AWS credentials and app secrets.
-3. Add the basic GitHub repository variables such as `DOMAIN_NAME` and `AWS_REGION`.
-4. Run `.github/workflows/bootstrap-aws.yml`.
-5. Read the `terraform-outputs` artifact from that workflow.
-6. Copy the `github_actions_repository_variables` output into GitHub Repository Variables.
-7. Run `.github/workflows/deploy-backend.yml`.
-8. Run `.github/workflows/deploy-landing.yml`.
-9. Run `.github/workflows/build-extension.yml`.
+3. Add the basic GitHub repository variables such as `AWS_REGION`.
+4. Leave `DOMAIN_NAME` empty if you want test mode without buying a domain.
+5. Run `.github/workflows/bootstrap-aws.yml`.
+6. Read the `terraform-outputs` artifact from that workflow.
+7. Copy the `github_actions_repository_variables` output into GitHub Repository Variables.
+8. Run `.github/workflows/deploy-backend.yml`.
+9. Run `.github/workflows/deploy-landing.yml`.
+10. Run `.github/workflows/build-extension.yml`.
 
 ## Required GitHub secrets
 
@@ -56,9 +58,9 @@ References:
 
 ## Required GitHub variables before bootstrap
 
-- `DOMAIN_NAME`
 - `AWS_REGION`
 - `PROJECT_NAME`
+- `DOMAIN_NAME`
 - `CREATE_ELASTICACHE`
 - `ECS_TASK_CPU`
 - `ECS_TASK_MEMORY`
@@ -69,6 +71,15 @@ References:
 - `LLM_OPENAI_MODEL`
 - `LOG_LEVEL`
 
+## No-domain test mode
+
+If `DOMAIN_NAME` is empty:
+
+- Backend uses `api_base_url = http://<alb-dns-name>`
+- Landing uses `landing_base_url = https://<cloudfront-domain>`
+- Terraform skips custom Route 53 records and ACM certificates
+- Backend logic does not change
+
 ## What changed in this repo
 
 - The backend container no longer runs migrations during normal startup.
@@ -77,6 +88,7 @@ References:
 - Extension host permissions now inject the API origin from `VITE_API_URL` at build time.
 - AWS infrastructure and deployment scripts live under `research-kit/infra/aws/`.
 - GitHub Actions workflows now cover bootstrap, backend deploy, landing deploy, and extension build.
+- The Terraform stack now supports both `custom domain` and `no-domain test mode`.
 
 ## Main local fallback commands
 
@@ -89,7 +101,7 @@ cd ..
 AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./run-backend-migrations.sh
 AWS_REGION=ap-southeast-1 IMAGE_TAG=prod-001 ./deploy-ecs-service.sh
 AWS_REGION=ap-southeast-1 ./sync-landing.sh
-VITE_API_URL=https://api.<your-domain>/v1 VITE_GOOGLE_CLIENT_ID=<google-client-id> ./build-extension.sh
+VITE_API_URL=<api_base_url>/v1 VITE_GOOGLE_CLIENT_ID=<google-client-id> ./build-extension.sh
 ```
 
 ## Files to use
