@@ -22,6 +22,12 @@ variable "db_instance_class" {
   default     = "db.t4g.micro"
 }
 
+variable "db_backup_retention_period" {
+  description = "RDS backup retention in days. Free-tier restricted accounts may require 0."
+  type        = number
+  default     = 0
+}
+
 variable "ecs_task_cpu" {
   description = "Fargate task CPU units. 512 = 0.5 vCPU."
   type        = number
@@ -48,6 +54,12 @@ variable "redis_node_type" {
 
 variable "create_elasticache" {
   description = "Create Redis on AWS. Disable this and set external_redis_url to reduce spend."
+  type        = bool
+  default     = false
+}
+
+variable "create_cloudfront" {
+  description = "Create CloudFront for the landing page. Disable on accounts that are not verified for CloudFront."
   type        = bool
   default     = false
 }

@@ -1,6 +1,8 @@
 project_name = "research-kit"
 domain_name  = ""
+db_backup_retention_period = 0
 create_elasticache = false
+create_cloudfront  = false
 external_redis_url = "rediss://:<password>@<host>:6379/0"
 ecs_task_cpu       = 512
 ecs_task_memory    = 1024

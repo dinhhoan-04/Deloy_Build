@@ -6,6 +6,10 @@ output "has_custom_domain" {
   value = local.has_custom_domain
 }
 
+output "use_cloudfront" {
+  value = local.use_cloudfront
+}
+
 output "api_domain_name" {
   value = local.api_domain
 }
@@ -15,7 +19,7 @@ output "api_base_url" {
 }
 
 output "landing_base_url" {
-  value = local.has_custom_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.landing.domain_name}"
+  value = local.use_cloudfront ? (local.has_custom_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.landing[0].domain_name}") : "http://${aws_s3_bucket_website_configuration.landing.website_endpoint}"
 }
 
 output "route53_zone_id" {
@@ -103,11 +107,11 @@ output "landing_bucket_name" {
 }
 
 output "cloudfront_distribution_id" {
-  value = aws_cloudfront_distribution.landing.id
+  value = try(aws_cloudfront_distribution.landing[0].id, "")
 }
 
 output "cloudfront_domain_name" {
-  value = aws_cloudfront_distribution.landing.domain_name
+  value = try(aws_cloudfront_distribution.landing[0].domain_name, "")
 }
 
 output "database_host" {
@@ -150,7 +154,7 @@ output "github_actions_repository_variables" {
     ALB_TARGET_GROUP_ARN        = aws_lb_target_group.api.arn
     BACKEND_LOG_GROUP_NAME      = aws_cloudwatch_log_group.backend.name
     LANDING_BUCKET_NAME         = aws_s3_bucket.landing.bucket
-    CLOUDFRONT_DISTRIBUTION_ID  = aws_cloudfront_distribution.landing.id
+    CLOUDFRONT_DISTRIBUTION_ID  = try(aws_cloudfront_distribution.landing[0].id, "")
     DATABASE_URL_SECRET_ARN     = aws_secretsmanager_secret.backend["DATABASE_URL"].arn
     REDIS_URL_SECRET_ARN        = aws_secretsmanager_secret.backend["REDIS_URL"].arn
     SESSION_SECRET_ARN          = aws_secretsmanager_secret.backend["SESSION_SECRET"].arn
@@ -166,7 +170,8 @@ output "github_actions_repository_variables" {
     LLM_ZAI_MODEL               = var.llm_zai_model
     LLM_OPENAI_MODEL            = var.llm_openai_model
     API_BASE_URL                = local.has_custom_domain ? "https://${local.api_domain}" : "http://${aws_lb.api.dns_name}"
-    LANDING_BASE_URL            = local.has_custom_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.landing.domain_name}"
+    LANDING_BASE_URL            = local.use_cloudfront ? (local.has_custom_domain ? "https://${var.domain_name}" : "https://${aws_cloudfront_distribution.landing[0].domain_name}") : "http://${aws_s3_bucket_website_configuration.landing.website_endpoint}"
     DOMAIN_NAME                 = var.domain_name
+    CREATE_CLOUDFRONT           = tostring(var.create_cloudfront)
   }
 }

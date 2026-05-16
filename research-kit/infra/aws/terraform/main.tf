@@ -1,6 +1,7 @@
 locals {
   prefix            = lower(replace(var.project_name, "_", "-"))
   has_custom_domain = length(trimspace(var.domain_name)) > 0
+  use_cloudfront    = var.create_cloudfront
   api_domain        = local.has_custom_domain ? "api.${var.domain_name}" : ""
   www_domain        = local.has_custom_domain ? "www.${var.domain_name}" : ""
   landing_bucket    = "${local.prefix}-landing-${random_id.suffix.hex}"
@@ -258,7 +259,7 @@ resource "aws_db_instance" "postgres" {
   storage_encrypted       = true
   publicly_accessible     = false
   multi_az                = false
-  backup_retention_period = 7
+  backup_retention_period = var.db_backup_retention_period
   deletion_protection     = false
   skip_final_snapshot     = true
   apply_immediately       = true
@@ -575,10 +576,10 @@ resource "aws_s3_bucket" "landing" {
 
 resource "aws_s3_bucket_public_access_block" "landing" {
   bucket                  = aws_s3_bucket.landing.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  block_public_acls       = local.use_cloudfront
+  block_public_policy     = local.use_cloudfront
+  ignore_public_acls      = local.use_cloudfront
+  restrict_public_buckets = local.use_cloudfront
 }
 
 resource "aws_s3_bucket_ownership_controls" "landing" {
@@ -590,6 +591,8 @@ resource "aws_s3_bucket_ownership_controls" "landing" {
 }
 
 resource "aws_cloudfront_origin_access_control" "landing" {
+  count = local.use_cloudfront ? 1 : 0
+
   name                              = "${local.prefix}-landing"
   description                       = "CloudFront access for landing bucket"
   origin_access_control_origin_type = "s3"
@@ -598,7 +601,7 @@ resource "aws_cloudfront_origin_access_control" "landing" {
 }
 
 resource "aws_acm_certificate" "landing" {
-  count    = local.has_custom_domain ? 1 : 0
+  count    = local.use_cloudfront && local.has_custom_domain ? 1 : 0
   provider = aws.us_east_1
 
   domain_name               = var.domain_name
@@ -613,7 +616,7 @@ resource "aws_acm_certificate" "landing" {
 }
 
 resource "aws_route53_record" "landing_cert_validation" {
-  for_each = local.has_custom_domain ? {
+  for_each = local.use_cloudfront && local.has_custom_domain ? {
     for dvo in aws_acm_certificate.landing[0].domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
       record = dvo.resource_record_value
@@ -629,7 +632,7 @@ resource "aws_route53_record" "landing_cert_validation" {
 }
 
 resource "aws_acm_certificate_validation" "landing" {
-  count    = local.has_custom_domain ? 1 : 0
+  count    = local.use_cloudfront && local.has_custom_domain ? 1 : 0
   provider = aws.us_east_1
 
   certificate_arn         = aws_acm_certificate.landing[0].arn
@@ -637,6 +640,7 @@ resource "aws_acm_certificate_validation" "landing" {
 }
 
 resource "aws_cloudfront_distribution" "landing" {
+  count               = local.use_cloudfront ? 1 : 0
   enabled             = true
   default_root_object = "index.html"
   aliases             = local.has_custom_domain ? [var.domain_name, local.www_domain] : []
@@ -644,7 +648,7 @@ resource "aws_cloudfront_distribution" "landing" {
   origin {
     domain_name              = aws_s3_bucket.landing.bucket_regional_domain_name
     origin_id                = "landing-s3"
-    origin_access_control_id = aws_cloudfront_origin_access_control.landing.id
+    origin_access_control_id = aws_cloudfront_origin_access_control.landing[0].id
   }
 
   default_cache_behavior {
@@ -693,7 +697,21 @@ resource "aws_cloudfront_distribution" "landing" {
   tags = local.common_tags
 }
 
-data "aws_iam_policy_document" "landing_bucket" {
+resource "aws_s3_bucket_website_configuration" "landing" {
+  bucket = aws_s3_bucket.landing.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "index.html"
+  }
+}
+
+data "aws_iam_policy_document" "landing_bucket_cloudfront" {
+  count = local.use_cloudfront ? 1 : 0
+
   statement {
     sid    = "AllowCloudFrontReadOnly"
     effect = "Allow"
@@ -709,40 +727,57 @@ data "aws_iam_policy_document" "landing_bucket" {
     condition {
       test     = "StringEquals"
       variable = "AWS:SourceArn"
-      values   = [aws_cloudfront_distribution.landing.arn]
+      values   = [aws_cloudfront_distribution.landing[0].arn]
     }
+  }
+}
+
+data "aws_iam_policy_document" "landing_bucket_public" {
+  count = local.use_cloudfront ? 0 : 1
+
+  statement {
+    sid    = "AllowPublicReadForWebsite"
+    effect = "Allow"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.landing.arn}/*"]
   }
 }
 
 resource "aws_s3_bucket_policy" "landing" {
   bucket = aws_s3_bucket.landing.id
-  policy = data.aws_iam_policy_document.landing_bucket.json
+  policy = local.use_cloudfront ? data.aws_iam_policy_document.landing_bucket_cloudfront[0].json : data.aws_iam_policy_document.landing_bucket_public[0].json
 }
 
 resource "aws_route53_record" "landing_root" {
-  count = local.has_custom_domain ? 1 : 0
+  count = local.use_cloudfront && local.has_custom_domain ? 1 : 0
 
   zone_id = aws_route53_zone.main[0].zone_id
   name    = var.domain_name
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.landing.domain_name
-    zone_id                = aws_cloudfront_distribution.landing.hosted_zone_id
+    name                   = aws_cloudfront_distribution.landing[0].domain_name
+    zone_id                = aws_cloudfront_distribution.landing[0].hosted_zone_id
     evaluate_target_health = false
   }
 }
 
 resource "aws_route53_record" "landing_www" {
-  count = local.has_custom_domain ? 1 : 0
+  count = local.use_cloudfront && local.has_custom_domain ? 1 : 0
 
   zone_id = aws_route53_zone.main[0].zone_id
   name    = local.www_domain
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.landing.domain_name
-    zone_id                = aws_cloudfront_distribution.landing.hosted_zone_id
+    name                   = aws_cloudfront_distribution.landing[0].domain_name
+    zone_id                = aws_cloudfront_distribution.landing[0].hosted_zone_id
     evaluate_target_health = false
   }
 }

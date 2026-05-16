@@ -8,7 +8,7 @@ The repository is now prepared for an `AWS ECS/Fargate` deployment driven from `
 - Public API entrypoint: `Application Load Balancer`
 - Database: `Amazon RDS for PostgreSQL`
 - Redis: `Amazon ElastiCache for Redis OSS` or an external Redis URL
-- Landing page: `S3 + CloudFront`
+- Landing page: `S3 website` by default, optional `CloudFront`
 - Secrets: `AWS Secrets Manager`
 - Registry: `Amazon ECR`
 - Optional DNS: `Amazon Route 53`
@@ -22,6 +22,7 @@ As of `May 17, 2026`, this design is only `free-tier friendly`, not fully free:
 - `RDS` can fit AWS Free Tier eligibility or credits depending on your account type.
 - `ElastiCache` is the easiest part to cut if you want to preserve credits.
 - Leaving `DOMAIN_NAME` empty avoids domain purchase and custom DNS setup.
+- Leaving `CREATE_CLOUDFRONT=false` avoids the account-verification blocker on new AWS accounts.
 
 References:
 
@@ -61,7 +62,9 @@ References:
 - `AWS_REGION`
 - `PROJECT_NAME`
 - `DOMAIN_NAME`
+- `DB_BACKUP_RETENTION_PERIOD`
 - `CREATE_ELASTICACHE`
+- `CREATE_CLOUDFRONT`
 - `ECS_TASK_CPU`
 - `ECS_TASK_MEMORY`
 - `ECS_DESIRED_COUNT`
@@ -76,7 +79,8 @@ References:
 If `DOMAIN_NAME` is empty:
 
 - Backend uses `api_base_url = http://<alb-dns-name>`
-- Landing uses `landing_base_url = https://<cloudfront-domain>`
+- Landing uses `landing_base_url = http://<s3-website-endpoint>` by default
+- If you later enable `CREATE_CLOUDFRONT=true`, landing can move to a CloudFront URL
 - Terraform skips custom Route 53 records and ACM certificates
 - Backend logic does not change
 

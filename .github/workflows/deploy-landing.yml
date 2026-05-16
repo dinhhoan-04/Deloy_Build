@@ -41,6 +41,7 @@ jobs:
             --region "$AWS_REGION"
 
       - name: Invalidate CloudFront
+        if: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID != '' }}
         run: |
           aws cloudfront create-invalidation \
             --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" \
@@ -52,5 +53,9 @@ jobs:
             echo "## Landing deploy complete"
             echo
             echo "- S3 bucket: \`$LANDING_BUCKET_NAME\`"
-            echo "- CloudFront distribution: \`$CLOUDFRONT_DISTRIBUTION_ID\`"
+            if [ -n "$CLOUDFRONT_DISTRIBUTION_ID" ]; then
+              echo "- CloudFront distribution: \`$CLOUDFRONT_DISTRIBUTION_ID\`"
+            else
+              echo "- CloudFront distribution: not used in test mode"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"

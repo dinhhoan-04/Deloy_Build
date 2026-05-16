@@ -11,6 +11,7 @@ This stack is adjusted for a short-lived AWS `Free Tier / credit` setup:
 - `RDS PostgreSQL` stays private in private subnets
 - `Redis` is optional on AWS because `ElastiCache` can burn credits quickly
 - Custom domains are optional; you can run entirely on AWS-generated URLs
+- `CloudFront` is optional and disabled by default for accounts not yet verified by AWS
 
 Important:
 
@@ -28,7 +29,8 @@ Important:
 - Optional private Redis OSS on `ElastiCache`
 - `ECR` repository for the backend image
 - `Secrets Manager` entries for backend runtime secrets
-- `S3 + CloudFront` for the landing page
+- `S3 website` for the landing page by default
+- Optional `CloudFront` only when `create_cloudfront = true`
 - Optional `Route 53 + ACM` only when `domain_name` is set
 
 ## GitHub workflows
@@ -55,7 +57,9 @@ Important:
    - `AWS_REGION=ap-southeast-1`
    - `PROJECT_NAME=research-kit`
    - `DOMAIN_NAME=` leave empty for test mode, or set your real domain later
+   - `DB_BACKUP_RETENTION_PERIOD=0`
    - `CREATE_ELASTICACHE=false`
+   - `CREATE_CLOUDFRONT=false`
    - `ECS_TASK_CPU=512`
    - `ECS_TASK_MEMORY=1024`
    - `ECS_DESIRED_COUNT=1`
@@ -74,8 +78,9 @@ Important:
 
 - The backend API uses the AWS ALB DNS name:
   - `http://<alb-name>.<region>.elb.amazonaws.com`
-- The landing page uses the AWS CloudFront domain:
-  - `https://<distribution>.cloudfront.net`
+- The landing page uses the AWS S3 website endpoint by default:
+  - `http://<bucket>.s3-website-<region>.amazonaws.com`
+- If you later enable `create_cloudfront = true`, landing will switch to the CloudFront domain
 - The extension build uses `API_BASE_URL` from Terraform outputs, so no custom domain is required
 
 ## Manual fallback
