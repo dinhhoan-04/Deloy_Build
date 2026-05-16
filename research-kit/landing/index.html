@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Research Kit — AI-powered research assistant</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --brand: #7c3aed;
+      --brand-dark: #6d28d9;
+      --brand-gradient: linear-gradient(135deg, #7c3aed, #2563eb);
+      --brand-subtle: rgba(124, 58, 237, 0.10);
+      --brand-border: rgba(124, 58, 237, 0.20);
+      --text: #111827;
+      --text-2: #374151;
+      --text-3: #6b7280;
+      --border: #e5e7eb;
+      --border-warm: rgba(124, 58, 237, 0.12);
+      --bg: #ffffff;
+      --bg-2: #faf8ff;
+      --bg-warm: rgba(124, 58, 237, 0.04);
+      --shadow-sm: 0 1px 3px rgba(124, 58, 237, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 16px rgba(124, 58, 237, 0.12), 0 2px 4px rgba(0, 0, 0, 0.05);
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--brand);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-logo-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--brand-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nav-logo-icon svg {
+      color: white;
+    }
+
+    .nav-right {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .nav-link {
+      font-size: 0.88rem;
+      color: var(--text-3);
+      font-weight: 500;
+    }
+
+    .nav-link:hover {
+      color: var(--brand);
+      text-decoration: none;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--brand-gradient);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.30);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 4px 16px rgba(124, 58, 237, 0.40);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: var(--bg-2);
+      border-color: var(--brand-border);
+      color: var(--brand);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 5.5rem 1.5rem 4.5rem;
+      max-width: 760px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(124, 58, 237, 0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--brand);
+      background: var(--brand-subtle);
+      border: 1px solid var(--brand-border);
+      border-radius: 999px;
+      padding: 0.3rem 0.85rem;
+      margin-bottom: 1.75rem;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.1rem, 5vw, 3.1rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 .gradient-text {
+      background: var(--brand-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--text-2);
+      margin-bottom: 2.25rem;
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.7;
+    }
+
+    .hero-badges {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2.25rem;
+    }
+
+    .badge {
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      background: var(--brand-subtle);
+      color: var(--brand);
+      border: 1px solid var(--brand-border);
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* ── Features ── */
+    .section {
+      padding: 4.5rem 1.5rem;
+      max-width: 1040px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--brand);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      text-align: center;
+      margin-bottom: 0.6rem;
+    }
+
+    .section-title {
+      font-size: 1.7rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.01em;
+    }
+
+    .section-sub {
+      font-size: 1rem;
+      color: var(--text-3);
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      border: 1px solid var(--border-warm);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: rgba(124, 58, 237, 0.25);
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--brand-gradient);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    .feature-card h3 {
+      font-size: 0.97rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .feature-card p {
+      font-size: 0.88rem;
+      color: var(--text-3);
+      line-height: 1.6;
+    }
+
+    /* ── How it works ── */
+    .how-section {
+      background: var(--bg-2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2rem;
+      counter-reset: step-counter;
+    }
+
+    .how-step {
+      counter-increment: step-counter;
+      text-align: center;
+    }
+
+    .how-num {
+      width: 40px;
+      height: 40px;
+      background: var(--brand-gradient);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: white;
+      margin: 0 auto 1rem;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.30);
+    }
+
+    .how-step h3 {
+      font-size: 0.97rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .how-step p {
+      font-size: 0.87rem;
+      color: var(--text-3);
+      line-height: 1.6;
+    }
+
+    /* ── Versions table ── */
+    .versions-section {
+      border-top: 1px solid var(--border);
+    }
+
+    .versions-section .section {
+      padding-top: 4rem;
+      padding-bottom: 4rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    thead tr {
+      border-bottom: 2px solid var(--border);
+    }
+
+    th {
+      text-align: left;
+      padding: 0.6rem 1rem;
+      font-weight: 600;
+      color: var(--text-2);
+      font-size: 0.85rem;
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .tag-latest {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: rgba(124, 58, 237, 0.10);
+      color: var(--brand);
+      border: 1px solid rgba(124, 58, 237, 0.25);
+      border-radius: 999px;
+      padding: 0.15rem 0.55rem;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+
+    .notes {
+      font-size: 0.85rem;
+      color: var(--text-3);
+    }
+
+    /* ── Install guide ── */
+    .install-section {
+      background: var(--bg-2);
+      border-top: 1px solid var(--border);
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .step {
+      display: flex;
+      gap: 1.25rem;
+      align-items: flex-start;
+      background: var(--bg);
+      border: 1px solid var(--border-warm);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      background: var(--brand-gradient);
+      color: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+    }
+
+    .step-body h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+      color: var(--text);
+    }
+
+    .step-body p,
+    .step-body code {
+      font-size: 0.88rem;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+
+    code {
+      background: rgba(124, 58, 237, 0.07);
+      border: 1px solid var(--brand-border);
+      border-radius: 4px;
+      padding: 0.1rem 0.4rem;
+      font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+      color: var(--brand-dark);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-3);
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .footer-logo-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--brand-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-logo-icon svg {
+      color: white;
+    }
+
+    .footer-logo span {
+      font-weight: 600;
+      color: var(--text-2);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 600px) {
+      .hero {
+        padding: 3.5rem 1rem 3rem;
+      }
+
+      .section {
+        padding: 3rem 1rem;
+      }
+
+      .nav-right .nav-link {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="nav-logo">
+      <div class="nav-logo-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
+      Research Kit
+    </div>
+    <div class="nav-right">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="#versions" class="nav-link">Versions</a>
+      <a href="#install" class="nav-link">Install</a>
+      <a href="#versions" class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.85rem;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Download
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
+      </svg>
+      Chrome Extension · Free
+    </div>
+    <h1>Research smarter.<br><span class="gradient-text">Verify, save, and synthesize</span><br>academic claims.</h1>
+    <p>Research Kit automatically verifies claims on Elicit, SciSpace and Consensus against source papers using AI —
+      then helps you build evidence-based drafts.</p>
+    <div class="hero-badges">
+      <span class="badge">Elicit</span>
+      <span class="badge">SciSpace</span>
+      <span class="badge">Consensus</span>
+      <span class="badge">AI-Powered</span>
+      <span class="badge">Stable LLM Routing</span>
+    </div>
+    <div class="cta-group">
+      <a href="#versions" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Download Extension
+      </a>
+      <a href="#install" class="btn btn-outline">Installation Guide →</a>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <div class="how-section">
+    <section class="section">
+      <div class="section-label">How it works</div>
+      <h2 class="section-title">From search to verified draft — in minutes</h2>
+      <div class="how-grid">
+        <div class="how-step">
+          <div class="how-num">1</div>
+          <h3>Search on your platform</h3>
+          <p>Navigate to Elicit, SciSpace or Consensus and run your research query as usual.</p>
+        </div>
+        <div class="how-step">
+          <div class="how-num">2</div>
+          <h3>Claims auto-detected</h3>
+          <p>Research Kit detects all claims on the page and verifies each one against the source paper via AI.</p>
+        </div>
+        <div class="how-step">
+          <div class="how-num">3</div>
+          <h3>Save to Inbox</h3>
+          <p>One click saves verified claims to your project inbox, grouped by paper and ready to review.</p>
+        </div>
+        <div class="how-step">
+          <div class="how-num">4</div>
+          <h3>Generate your draft</h3>
+          <p>Select claims from your inbox and let AI compose a citation-backed draft in seconds.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need for rigorous research</h2>
+    <p class="section-sub">Built for academics, students, and knowledge workers who need to trust their sources.</p>
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+        </div>
+        <h3>Auto-verify claims</h3>
+        <p>Detects claims on Elicit, SciSpace and Consensus and checks them against source papers using AI — no manual
+          copy-paste needed.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+            <path
+              d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+          </svg>
+        </div>
+        <h3>Organized Inbox</h3>
+        <p>Verified claims land in your project inbox, grouped by paper with status badges. Select and archive in bulk.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+        </div>
+        <h3>AI Draft writing</h3>
+        <p>Select claims from your inbox and generate a citation-backed draft in Short, Default or Long format — ready
+          to copy and edit.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          </svg>
+        </div>
+        <h3>Conflict detection</h3>
+        <p>Automatically flags contradictory findings and surfaces structured error messages with AI-suggested
+          resolutions — powered by fallback LLM routing for 99.9% uptime.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        </div>
+        <h3>Chat with papers</h3>
+        <p>Ask follow-up questions about any paper in your project and get grounded answers with source references.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+        </div>
+        <h3>Upload inaccessible PDFs</h3>
+        <p>Paper behind a paywall? Upload the PDF manually and Research Kit verifies claims against your local copy.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Versions table -->
+  <div class="versions-section" id="versions">
+    <section class="section">
+      <div class="section-label">Releases</div>
+      <h2 class="section-title">Versions</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Released</th>
+            <th>Notes</th>
+            <th>Download</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>0.6.1</strong>
+              <span class="tag-latest">Latest</span>
+            </td>
+            <td>2026-05-16</td>
+            <td class="notes">Migrate to Z.ai API for chat.</td>
+            <td>
+              <a href="releases/research-kit-0.6.1.zip" class="btn btn-primary"
+                style="font-size:0.82rem;padding:0.4rem 0.9rem;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                .zip
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>0.6.0</strong>
+            </td>
+            <td>2026-05-16</td>
+            <td class="notes">Improve chat function</td>
+            <td>
+              <a href="releases/research-kit-0.6.0.zip" class="btn btn-primary"
+                style="font-size:0.82rem;padding:0.4rem 0.9rem;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                .zip
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>0.5.0</strong>
+            </td>
+            <td>2026-05-16</td>
+            <td class="notes">Stable LLM fallbacks (Groq → Gemini/OpenAI), structured error messages, batched conflict
+              detection for 3x faster analysis, improved tab state cleanup.</td>
+            <td>
+              <a href="releases/research-kit-0.5.0.zip" class="btn btn-primary"
+                style="font-size:0.82rem;padding:0.4rem 0.9rem;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                .zip
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>0.4.0</strong>
+            </td>
+            <td>2026-05-15</td>
+            <td class="notes">Conflict detection overhaul (auto-detect, radio-select, confirm flow), inbox bulk archive
+              &amp; auto-archive after Add to project, draft date metadata in <code>.md</code>/<code>.docx</code>
+              export, structured verify error messages.</td>
+            <td>
+              <a href="releases/research-kit-0.4.0.zip" class="btn btn-primary"
+                style="font-size:0.82rem;padding:0.4rem 0.9rem;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                .zip
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>0.3.0</strong></td>
+            <td>2026-05-15</td>
+            <td class="notes">UI polish: brand purple design system, skeleton loading, hover animations, custom
+              checkboxes, branded empty states, SVG icons throughout.</td>
+            <td>
+              <a href="releases/research-kit-0.3.0.zip" style="font-size:0.82rem;color:var(--text-3);">.zip</a>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>0.2.0</strong></td>
+            <td>2026-05-12</td>
+            <td class="notes">Initial public release. Auto-verify on Elicit, SciSpace, Consensus. Inbox, draft, conflict
+              detection, PDF upload, Google sign-in.</td>
+            <td>
+              <a href="releases/research-kit-0.2.0.zip" style="font-size:0.82rem;color:var(--text-3);">.zip</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:0.82rem;color:var(--text-3);margin-top:1rem;text-align:center;">
+        Chrome Web Store submission coming soon. Until then, install manually using the steps below.
+      </p>
+    </section>
+  </div>
+
+  <!-- Install guide -->
+  <div class="install-section" id="install">
+    <section class="section">
+      <div class="section-label">Setup</div>
+      <h2 class="section-title">Installation guide</h2>
+      <p class="section-sub">Takes about 2 minutes. No developer experience needed.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h3>Download the extension</h3>
+            <p>Click the <strong>Download Extension</strong> button above and save the <code>.zip</code> file somewhere
+              you can find it.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h3>Unzip the file</h3>
+            <p>Extract the <code>.zip</code> to a permanent folder (e.g. <code>~/extensions/research-kit</code>). Don't
+              delete the folder after installation — Chrome needs it.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h3>Open Chrome Extensions</h3>
+            <p>Navigate to <code>chrome://extensions</code> and enable <strong>Developer mode</strong> with the toggle
+              in the top-right corner.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h3>Load the extension</h3>
+            <p>Click <strong>Load unpacked</strong> and select the folder from step 2. The Research Kit icon appears in
+              your Chrome toolbar.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h3>Sign in and create a project</h3>
+            <p>Click the Research Kit icon to open the sidebar, sign in with your Google account, and create your first
+              project. Navigate to Elicit, SciSpace or Consensus — claims are detected and verified automatically.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-logo">
+      <div class="footer-logo-icon">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </div>
+      <span>Research Kit</span>
+    </div>
+    <p>Research Kit &copy; 2026 &mdash; <a href="mailto:support@researchkit.app">support@researchkit.app</a></p>
+  </footer>
+
+</body>
+
+</html>

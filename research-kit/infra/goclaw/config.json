@@ -1,0 +1,110 @@
+{
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 18790,
+    "token": "env:GOCLAW_GATEWAY_TOKEN",
+    "rate_limit_rpm": 0,
+    "tool_status": false,
+    "block_reply": false
+  },
+  "providers": {
+    "anthropic": {
+      "api_key": "env:GOCLAW_ANTHROPIC_API_KEY"
+    },
+    "openai": {
+      "api_key": "env:GOCLAW_OPENAI_API_KEY"
+    },
+    "gemini": {
+      "api_key": "env:GOCLAW_GEMINI_API_KEY",
+      "api_base": "https://generativelanguage.googleapis.com/v1beta/openai/"
+    }
+  },
+  "agents": {
+    "defaults": {
+      "provider": "openai",
+      "model": "gpt-4o-mini",
+      "agent_type": "predefined",
+      "max_tokens": 4096,
+      "temperature": 0.2,
+      "max_tool_iterations": 8,
+      "max_tool_calls": 12,
+      "context_window": 200000,
+      "restrict_to_workspace": true,
+      "memory": {
+        "enabled": false
+      }
+    },
+    "list": {
+      "rk-verify": {
+        "displayName": "RK Verify",
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "tools": {
+          "allow": []
+        }
+      },
+      "rk-extract": {
+        "displayName": "RK Extract",
+        "tools": {
+          "allow": []
+        }
+      },
+      "rk-conflict": {
+        "displayName": "RK Conflict",
+        "tools": {
+          "allow": []
+        }
+      },
+      "rk-draft": {
+        "displayName": "RK Draft",
+        "tools": {
+          "allow": [],
+          "alsoAllow": ["rk_get_inbox_items"]
+        }
+      },
+      "rk-chat": {
+        "displayName": "RK Chat",
+        "tools": {
+          "allow": [],
+          "alsoAllow": ["rk_search_inbox", "rk_get_inbox_items"]
+        }
+      }
+    }
+  },
+  "tools": {
+    "allow": [],
+    "rate_limit_per_hour": 10000,
+    "scrub_credentials": true,
+    "execApproval": {
+      "security": "deny",
+      "ask": "off"
+    },
+    "browser": {
+      "enabled": false
+    },
+    "mcp_servers": {
+      "rk-inbox": {
+        "transport": "streamable-http",
+        "url": "http://backend:8000/mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer env:RK_MCP_TOKEN"
+        },
+        "tool_prefix": "rk_",
+        "timeout_sec": 30,
+        "enabled": true
+      }
+    }
+  },
+  "subagents": {
+    "maxConcurrent": 0,
+    "maxSpawnDepth": 1,
+    "maxChildrenPerAgent": 0
+  },
+  "sandbox": {
+    "mode": "off"
+  },
+  "telemetry": {
+    "enabled": false
+  },
+  "bindings": []
+}

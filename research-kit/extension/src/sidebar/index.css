@@ -1,0 +1,178 @@
+@import "tailwindcss";
+@import './styles/tokens.css';
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+html, body {
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+#root {
+  min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+body {
+  font-family: Aptos, "Segoe UI Variable", "Segoe UI", "IBM Plex Sans", "Noto Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--rk-text);
+  background:
+    radial-gradient(120% 60% at 0% 0%, #ede9fe 0%, transparent 55%),
+    radial-gradient(120% 60% at 100% 100%, #dbeafe 0%, transparent 60%),
+    var(--rk-bg);
+}
+
+/* Tailwind-like utility classes for basic styling */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+.h-screen {
+  height: 100vh;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.p-4 {
+  padding: 1rem;
+}
+
+.p-3 {
+  padding: 0.75rem;
+}
+
+.p-2 {
+  padding: 0.5rem;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+.gap-3 {
+  gap: 0.75rem;
+}
+
+.space-y-3 > * + * {
+  margin-top: 0.75rem;
+}
+
+.rounded {
+  border-radius: 0.375rem;
+}
+
+.border {
+  border: 1px solid;
+}
+
+.border-t {
+  border-top: 1px solid;
+}
+
+.border-b {
+  border-bottom: 1px solid;
+}
+
+.border-l-2 {
+  border-left: 2px solid;
+}
+
+.border-slate-700 {
+  border-color: #374151;
+}
+
+.bg-slate-950 {
+  background-color: #030712;
+}
+
+.bg-slate-900 {
+  background-color: #111827;
+}
+
+.bg-slate-800 {
+  background-color: #1f2937;
+}
+
+.text-slate-100 {
+  color: #f1f5f9;
+}
+
+.text-slate-200 {
+  color: #e2e8f0;
+}
+
+.text-slate-300 {
+  color: #cbd5e1;
+}
+
+.text-slate-400 {
+  color: #94a3b8;
+}
+
+.text-slate-500 {
+  color: #64748b;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}

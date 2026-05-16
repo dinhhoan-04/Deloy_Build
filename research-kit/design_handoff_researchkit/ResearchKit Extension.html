@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ResearchKit — Side Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #060a14; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Sans', system-ui, sans-serif; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a3554; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3d4f73; }
+  @keyframes fadeSlideIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes slideInRight { from { transform:translateX(100%); } to { transform:translateX(0); } }
+  @keyframes slideInDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  @keyframes badgePop { 0% { transform:scale(0.6); opacity:0; } 70% { transform:scale(1.15); } 100% { transform:scale(1); opacity:1; } }
+  @keyframes spinRing { to { transform:rotate(360deg); } }
+  @keyframes toastIn { from { opacity:0; transform:translateY(12px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+  @keyframes conflictPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(240,108,108,0.3); } 50% { box-shadow: 0 0 0 4px rgba(240,108,108,0); } }
+</style>
+</head>
+<body>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ── TOKENS ── */
+const T = {
+  bg0:'#060a14', bg1:'#0b1120', bg2:'#101828', bg3:'#162035', bg4:'#1c2a42',
+  border:'#1e2d47', border2:'#263654',
+  text1:'#e8edf5', text2:'#9baec8', text3:'#5d7299',
+  amber:'#f4a535', amberDim:'#7a4f10', amberBg:'#1a1005',
+  green:'#34d87a', greenDim:'#1a5c38', greenBg:'#07130e',
+  red:'#f06c6c',   redDim:'#5c1e1e',   redBg:'#130707',
+  blue:'#5b9cf6',  blueDim:'#1e3a6e',  blueBg:'#060e1f',
+  purple:'#a78bfa',purpleDim:'#3d2a70',purpleBg:'#0e091f',
+  orange:'#fb923c',orangeDim:'#7c3a10',orangeBg:'#180d04',
+};
+
+/* ── MOCK DATA ── */
+const ALL_CLAIMS = [
+  { id:'c1', text:'"Sleep increases memory consolidation by 40% compared to wakefulness"', paperTitle:'Walker 2017 — Why We Sleep', doi:'10.1038/s41593-019-0483-5', status:'verified', confidence:0.94, quote:'Memory consolidation during sleep relies on hippocampal replay during slow-wave sleep stages.', page:'p.142', site:'elicit', saved:false },
+  { id:'c2', text:'"REM sleep accounts for 80% of total memory processing"', paperTitle:'Smith & Jones 2020', doi:'10.1016/j.sleep.2020.01.023', status:'partial', confidence:0.61, quote:null, page:'abstract only', site:'elicit', saved:false },
+  { id:'c3', text:'"Participants showed 40% improvement in recall after 8h sleep"', paperTitle:'Chen et al. 2019', doi:null, status:'not_found', confidence:0.12, quote:null, page:'full-text checked', site:'consensus', saved:false },
+  { id:'c4', text:'"NREM slow oscillations actively transfer memories from hippocampus to neocortex"', paperTitle:'Stickgold 2005 — Nature Neuroscience', doi:'10.1038/nn1576', status:'verified', confidence:0.89, quote:'Slow oscillations during NREM sleep coordinate hippocampal-neocortical dialogue for long-term consolidation.', page:'p.3', site:'elicit', saved:true },
+  { id:'c5', text:'"Caffeine before sleep reduces slow-wave activity by 20%"', paperTitle:'Landolt et al. 2012', doi:'10.1152/japplphysiol.2004', status:'partial', confidence:0.55, quote:null, page:'abstract match', site:'scispace', saved:false },
+  { id:'c6', text:'"Deep sleep deprivation causes 37% cognitive decline within 24h"', paperTitle:'Harrison & Horne 2000', doi:'10.1093/sleep/23.3.371', status:'verified', confidence:0.91, quote:'Total sleep deprivation produced significant deficits across all executive function measures tested.', page:'p.5', site:'consensus', saved:false },
+];
+
+const MOCK_INBOX = [
+  { id:'i1', text:'"Sleep increases memory consolidation by 40% compared to wakefulness"', paperTitle:'Walker 2017 — Why We Sleep', quote:'Memory consolidation during sleep relies on hippocampal replay during slow-wave sleep stages.', project:'Sleep & Memory', savedAt:'2 min ago', status:'verified', confidence:0.94 },
+  { id:'i2', text:'"NREM slow oscillations actively transfer memories from hippocampus to neocortex"', paperTitle:'Stickgold 2005 — Nature Neuroscience', quote:'Slow oscillations during NREM sleep coordinate hippocampal-neocortical dialogue for long-term consolidation.', project:'Sleep & Memory', savedAt:'5 min ago', status:'verified', confidence:0.89 },
+  { id:'i3', text:'"Deep sleep deprivation causes 37% cognitive decline within 24h"', paperTitle:'Harrison & Horne 2000', quote:'Total sleep deprivation produced significant deficits across all executive function measures tested.', project:'Sleep & Memory', savedAt:'12 min ago', status:'verified', confidence:0.91 },
+];
+
+const MOCK_CONFLICTS = [
+  {
+    id:'cf1', paper:'Walker 2017 — Why We Sleep', doi:'10.1038/s41593-019-0483-5',
+    topic:'Memory consolidation mechanism',
+    flaggedAt:'3 min ago',
+    sides: [
+      { site:'elicit',    color:'#5b9cf6', claim:'"Sleep consolidates memory through hippocampal replay during slow-wave sleep, primarily a NREM process."', confidence:0.94, status:'verified' },
+      { site:'consensus', color:'#a78bfa', claim:'"Memory consolidation occurs mainly during REM sleep via synaptic homeostasis and emotional memory processing."', confidence:0.78, status:'verified' },
+    ],
+    resolution: null,
+  },
+  {
+    id:'cf2', paper:'Smith & Jones 2020', doi:'10.1016/j.sleep.2020.01.023',
+    topic:'REM sleep share of memory processing',
+    flaggedAt:'8 min ago',
+    sides: [
+      { site:'elicit',    color:'#5b9cf6', claim:'"REM sleep accounts for 80% of total memory processing across all memory types."', confidence:0.61, status:'partial' },
+      { site:'scispace',  color:'#34d87a', claim:'"REM sleep is primarily involved in procedural and emotional memory; declarative memory relies mainly on NREM."', confidence:0.83, status:'verified' },
+    ],
+    resolution: null,
+  },
+];
+
+const PROJECTS = ['Sleep & Memory', 'Cognitive Load', 'Decision Making'];
+
+const SITES_CFG = [
+  { id:'elicit',    label:'Elicit',    desc:'Literature synthesis', color: T.blue },
+  { id:'scispace',  label:'SciSpace',  desc:'Paper Q&A',            color: T.green },
+  { id:'consensus', label:'Consensus', desc:'Research consensus',   color: T.purple },
+];
+
+const MOCK_CHAT = [
+  { role:'user', text:'What do these papers agree on?' },
+  { role:'assistant', text:'Based on 3 verified claims in your inbox, there is strong consensus that sleep plays an active role in memory consolidation — not merely a passive rest state.\n\nKey agreement points:\n• Slow-wave NREM sleep is the primary window for hippocampal→neocortical memory transfer (Stickgold 2005; Walker 2017)\n• Sleep deprivation reliably impairs executive function and recall (Harrison & Horne 2000)\n\nNote: The 40% figure from Walker 2017 is verified; the 80% REM claim from Smith 2020 remains partial — I excluded it from this synthesis.' },
+];
+
+/* ── HELPERS ── */
+function Checkbox({ checked, onChange, size=14 }) {
+  return (
+    <div onClick={onChange} style={{
+      width:size, height:size, borderRadius:3, flexShrink:0,
+      border:`1px solid ${checked ? T.blue : T.border2}`,
+      background: checked ? T.blue : 'transparent',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      cursor:'pointer', transition:'all 0.15s',
+    }}>
+      {checked && <span style={{ fontSize:size*0.65, color:'#fff', lineHeight:1 }}>✓</span>}
+    </div>
+  );
+}
+
+function Toggle({ value, onChange }) {
+  return (
+    <div onClick={() => onChange(!value)} style={{
+      cursor:'pointer', width:30, height:16, borderRadius:8,
+      background: value ? T.greenDim : T.bg3,
+      border:`1px solid ${value ? T.greenDim : T.border}`,
+      position:'relative', transition:'background 0.2s', flexShrink:0,
+    }}>
+      <div style={{ position:'absolute', top:2, left: value ? 14 : 2, width:10, height:10, borderRadius:5, background: value ? T.green : T.text3, transition:'left 0.2s' }} />
+    </div>
+  );
+}
+
+function StatusBadge({ status, mini }) {
+  const cfg = {
+    verified:  { icon:'✓', label:'Verified',  color:T.green,  bg:T.greenBg,  border:T.greenDim },
+    partial:   { icon:'~', label:'Partial',   color:T.amber,  bg:T.amberBg,  border:T.amberDim },
+    not_found: { icon:'✕', label:'Not found', color:T.red,    bg:T.redBg,    border:T.redDim   },
+    pending:   { icon:'…', label:'Pending',   color:T.text3,  bg:T.bg2,      border:T.border   },
+    error:     { icon:'!', label:'Error',     color:T.red,    bg:T.redBg,    border:T.redDim   },
+  }[status] || { icon:'?', label:'Unknown', color:T.text3, bg:T.bg2, border:T.border };
+  return (
+    <span style={{
+      display:'inline-flex', alignItems:'center', gap: mini ? 2 : 4,
+      background:cfg.bg, border:`1px solid ${cfg.border}`, borderRadius:4,
+      padding: mini ? '1px 5px' : '2px 7px',
+      fontSize:10, fontWeight:600, color:cfg.color,
+      fontFamily:'IBM Plex Mono, monospace', letterSpacing:'0.03em',
+      animation: mini ? 'badgePop 0.3s ease' : 'none',
+    }}>{cfg.icon}{!mini && ' ' + cfg.label.toUpperCase()}</span>
+  );
+}
+
+function ConfidenceBar({ value }) {
+  const color = value >= 0.8 ? T.green : value >= 0.5 ? T.amber : T.red;
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+      <div style={{ flex:1, height:3, background:T.bg3, borderRadius:2, overflow:'hidden' }}>
+        <div style={{ width:`${value*100}%`, height:'100%', background:color, borderRadius:2, transition:'width 0.4s ease' }} />
+      </div>
+      <span style={{ fontSize:10, color:T.text3, fontFamily:'IBM Plex Mono, monospace', minWidth:28 }}>{Math.round(value*100)}%</span>
+    </div>
+  );
+}
+
+/* ── SETTINGS PANEL ── */
+function SettingsPanel({ open, onClose, activeSites, onToggleSite, provider, onProviderChange, autoVerify, onAutoVerifyChange, verifyDelay, onVerifyDelayChange }) {
+  if (!open) return null;
+  return (
+    <div style={{
+      position:'absolute', inset:0, zIndex:200,
+      display:'flex', flexDirection:'column',
+      background:T.bg1, animation:'slideInRight 0.22s ease',
+    }}>
+      {/* Header */}
+      <div style={{ background:T.bg0, borderBottom:`1px solid ${T.border}`, padding:'10px 14px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        <button onClick={onClose} style={{ background:'transparent', border:'none', color:T.text3, cursor:'pointer', fontSize:16, lineHeight:1, padding:'0 4px' }}>←</button>
+        <span style={{ fontWeight:600, fontSize:12, color:T.text1 }}>Settings</span>
+      </div>
+
+      <div style={{ flex:1, overflowY:'auto', padding:'0 0 12px 0' }}>
+
+        {/* ── SITES SECTION ── */}
+        <div style={{ padding:'14px 14px 6px' }}>
+          <p style={{ fontSize:10, fontWeight:600, color:T.text3, letterSpacing:'0.08em', marginBottom:10 }}>ACTIVE SITES</p>
+          <p style={{ fontSize:10, color:T.text3, marginBottom:10, lineHeight:1.5 }}>
+            Select which AI research tools to scan for claims. Deselected sites are ignored — no API calls, no badges.
+          </p>
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+            {SITES_CFG.map(site => (
+              <div key={site.id} onClick={() => onToggleSite(site.id)} style={{
+                display:'flex', alignItems:'center', gap:10, padding:'9px 12px',
+                background: activeSites.has(site.id) ? T.bg3 : T.bg2,
+                border:`1px solid ${activeSites.has(site.id) ? T.border2 : T.border}`,
+                borderRadius:7, cursor:'pointer', transition:'all 0.15s',
+              }}>
+                <div style={{ width:8, height:8, borderRadius:4, background: activeSites.has(site.id) ? site.color : T.text3, flexShrink:0, transition:'background 0.2s' }} />
+                <div style={{ flex:1 }}>
+                  <p style={{ fontSize:11, color: activeSites.has(site.id) ? T.text1 : T.text3, fontWeight:500, transition:'color 0.15s' }}>{site.label}</p>
+                  <p style={{ fontSize:10, color:T.text3 }}>{site.desc}</p>
+                </div>
+                <Toggle value={activeSites.has(site.id)} onChange={() => onToggleSite(site.id)} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ height:1, background:T.border, margin:'10px 14px' }} />
+
+        {/* ── AI PROVIDER SECTION ── */}
+        <div style={{ padding:'0 14px' }}>
+          <p style={{ fontSize:10, fontWeight:600, color:T.text3, letterSpacing:'0.08em', marginBottom:10 }}>AI PROVIDER</p>
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+            {[
+              { id:'anthropic', label:'Claude (Anthropic)', sub:'Recommended' },
+              { id:'openai',    label:'GPT-4o (OpenAI)',   sub:'Alternative' },
+              { id:'gemini',    label:'Gemini 2.0 (Google)',sub:'Alternative' },
+            ].map(p => (
+              <div key={p.id} onClick={() => onProviderChange(p.id)} style={{
+                display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
+                background: provider===p.id ? T.bg3 : T.bg2,
+                border:`1px solid ${provider===p.id ? T.blueDim : T.border}`,
+                borderRadius:7, cursor:'pointer', transition:'all 0.15s',
+              }}>
+                <div style={{ width:12, height:12, borderRadius:6, border:`2px solid ${provider===p.id ? T.blue : T.border2}`, background: provider===p.id ? T.blue : 'transparent', flexShrink:0, transition:'all 0.15s' }} />
+                <div style={{ flex:1 }}>
+                  <span style={{ fontSize:11, color: provider===p.id ? T.text1 : T.text2 }}>{p.label}</span>
+                  {p.sub && <span style={{ fontSize:9, color:T.text3, marginLeft:6 }}>{p.sub}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ height:1, background:T.border, margin:'10px 14px' }} />
+
+        {/* ── AUTO-VERIFY SECTION ── */}
+        <div style={{ padding:'0 14px' }}>
+          <p style={{ fontSize:10, fontWeight:600, color:T.text3, letterSpacing:'0.08em', marginBottom:10 }}>AUTO-VERIFY</p>
+          <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px', background:T.bg2, border:`1px solid ${T.border}`, borderRadius:7 }}>
+              <div>
+                <p style={{ fontSize:11, color:T.text1 }}>Run on page load</p>
+                <p style={{ fontSize:10, color:T.text3 }}>Start scanning when site is detected</p>
+              </div>
+              <Toggle value={autoVerify} onChange={onAutoVerifyChange} />
+            </div>
+            <div style={{ padding:'8px 12px', background:T.bg2, border:`1px solid ${T.border}`, borderRadius:7 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <p style={{ fontSize:11, color:T.text1 }}>Verify delay</p>
+                <span style={{ fontSize:10, color:T.blue, fontFamily:'IBM Plex Mono, monospace' }}>{verifyDelay}s</span>
+              </div>
+              <input type="range" min={0} max={10} step={0.5} value={verifyDelay}
+                onChange={e => onVerifyDelayChange(+e.target.value)}
+                style={{ width:'100%', accentColor:T.blue }}
+              />
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:9, color:T.text3 }}>Instant</span>
+                <span style={{ fontSize:9, color:T.text3 }}>10s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ height:1, background:T.border, margin:'10px 14px' }} />
+
+        {/* ── DANGER ZONE ── */}
+        <div style={{ padding:'0 14px' }}>
+          <p style={{ fontSize:10, fontWeight:600, color:T.redDim, letterSpacing:'0.08em', marginBottom:10 }}>DATA</p>
+          <button style={{ width:'100%', background:'transparent', border:`1px solid ${T.redDim}`, color:T.red, fontSize:11, padding:'8px', borderRadius:7, cursor:'pointer' }}>
+            Clear all sessions & inbox
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── CLAIM CARD ── */
+function ClaimCard({ claim, onSave, isNew }) {
+  const [expanded, setExpanded] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const borderColor = { verified:T.greenDim, partial:T.amberDim, not_found:T.redDim, pending:T.border, error:T.redDim }[claim.status] || T.border;
+  const bgColor     = { verified:T.greenBg,  partial:T.amberBg,  not_found:T.redBg,  pending:T.bg2,   error:T.redBg  }[claim.status] || T.bg2;
+  const handleSave = (e) => { e.stopPropagation(); setJustSaved(true); onSave(claim.id); setTimeout(() => setJustSaved(false), 2000); };
+  return (
+    <div style={{ background:bgColor, border:`1px solid ${borderColor}`, borderRadius:7, padding:'9px 10px', cursor:'pointer', animation: isNew ? 'fadeSlideIn 0.35s ease' : 'none', transition:'border-color 0.2s' }}
+      onClick={() => setExpanded(e => !e)}>
+      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+        <StatusBadge status={claim.status} mini />
+        <span style={{ fontSize:9, color:T.text3, marginLeft:'auto' }}>{claim.site}</span>
+        <span style={{ fontSize:10, color:T.text3 }}>{expanded ? '▲' : '▼'}</span>
+      </div>
+      <p style={{ fontSize:11, color:T.text1, lineHeight:1.5, marginTop:5, fontStyle:'italic' }}>{claim.text}</p>
+      <p style={{ fontSize:10, color:T.text3, marginTop:3 }}>{claim.paperTitle} · {claim.page}</p>
+      {expanded && (
+        <div style={{ marginTop:8, animation:'fadeSlideIn 0.2s ease' }}>
+          <ConfidenceBar value={claim.confidence} />
+          {claim.quote && (
+            <div style={{ marginTop:6, background:T.bg3, borderLeft:`2px solid ${borderColor}`, borderRadius:'0 4px 4px 0', padding:'5px 8px' }}>
+              <span style={{ fontSize:9, color:T.text3, display:'block', marginBottom:2 }}>VERBATIM QUOTE</span>
+              <p style={{ fontSize:10, color:T.text2, lineHeight:1.5, fontFamily:'IBM Plex Mono, monospace' }}>{claim.quote}</p>
+            </div>
+          )}
+          {claim.status === 'partial' && <p style={{ fontSize:10, color:T.amber, marginTop:5 }}>⚠ Abstract match only — upload PDF for full verification</p>}
+          {claim.status === 'not_found' && <p style={{ fontSize:10, color:T.red, marginTop:5 }}>✕ Claim not found in full text of paper</p>}
+          <div style={{ display:'flex', gap:5, marginTop:7 }}>
+            {claim.status !== 'not_found' && !claim.saved && (
+              <button onClick={handleSave} style={{ background: justSaved ? T.greenDim : T.bg3, border:`1px solid ${justSaved ? T.greenDim : T.border}`, color: justSaved ? T.green : T.text2, fontSize:10, padding:'3px 8px', borderRadius:4, cursor:'pointer', transition:'all 0.2s' }}>
+                {justSaved ? '✓ Saved' : '+ Save to Inbox'}
+              </button>
+            )}
+            {claim.saved && <span style={{ fontSize:10, color:T.green, padding:'3px 0' }}>✓ In Inbox</span>}
+            {claim.status === 'partial' && (
+              <button onClick={e => e.stopPropagation()} style={{ background:T.bg3, border:`1px solid ${T.border}`, color:T.text2, fontSize:10, padding:'3px 8px', borderRadius:4, cursor:'pointer' }}>Upload PDF</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── VERIFY TAB ── */
+function VerifyTab({ claims, onSave, activeSites }) {
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [siteFilter, setSiteFilter] = useState('all');
+
+  const counts = {
+    verified:  claims.filter(c=>c.status==='verified').length,
+    partial:   claims.filter(c=>c.status==='partial').length,
+    not_found: claims.filter(c=>c.status==='not_found').length,
+  };
+
+  const filtered = claims.filter(c => {
+    const statusOk = statusFilter === 'all' || c.status === statusFilter;
+    const siteOk   = siteFilter   === 'all' || c.site   === siteFilter;
+    return statusOk && siteOk;
+  });
+
+  const newIds = claims.slice(-2).map(c => c.id);
+  const presentSites = [...new Set(claims.map(c => c.site))];
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      <div style={{ padding:'8px 12px', borderBottom:`1px solid ${T.border}`, background:T.bg2, flexShrink:0 }}>
+        {/* Summary counts */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+          <span style={{ fontSize:10, color:T.text3 }}>This page · {claims.length} claims</span>
+          <div style={{ display:'flex', gap:4 }}>
+            {counts.verified > 0  && <span style={{ background:T.greenBg, border:`1px solid ${T.greenDim}`, color:T.green,  fontSize:9, padding:'1px 5px', borderRadius:10, fontWeight:600 }}>✓ {counts.verified}</span>}
+            {counts.partial > 0   && <span style={{ background:T.amberBg, border:`1px solid ${T.amberDim}`, color:T.amber,  fontSize:9, padding:'1px 5px', borderRadius:10, fontWeight:600 }}>~ {counts.partial}</span>}
+            {counts.not_found > 0 && <span style={{ background:T.redBg,   border:`1px solid ${T.redDim}`,   color:T.red,    fontSize:9, padding:'1px 5px', borderRadius:10, fontWeight:600 }}>✕ {counts.not_found}</span>}
+          </div>
+        </div>
+        {/* Status filter */}
+        <div style={{ display:'flex', gap:4, marginBottom:5 }}>
+          {['all','verified','partial','not_found'].map(f => (
+            <button key={f} onClick={() => setStatusFilter(f)} style={{
+              background: statusFilter===f ? T.border2 : 'transparent',
+              border:`1px solid ${statusFilter===f ? T.border2 : T.border}`,
+              color: statusFilter===f ? T.text1 : T.text3,
+              fontSize:9, padding:'2px 7px', borderRadius:10, cursor:'pointer', fontFamily:'IBM Plex Sans, system-ui',
+            }}>{f==='not_found'?'not found':f}</button>
+          ))}
+        </div>
+        {/* Site filter */}
+        {presentSites.length > 1 && (
+          <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+            <span style={{ fontSize:9, color:T.text3, marginRight:2 }}>Site:</span>
+            <button onClick={() => setSiteFilter('all')} style={{
+              background: siteFilter==='all' ? T.border2 : 'transparent',
+              border:`1px solid ${siteFilter==='all' ? T.border2 : T.border}`,
+              color: siteFilter==='all' ? T.text1 : T.text3,
+              fontSize:9, padding:'2px 7px', borderRadius:10, cursor:'pointer', fontFamily:'IBM Plex Sans, system-ui',
+            }}>all</button>
+            {presentSites.map(s => {
+              const cfg = SITES_CFG.find(x => x.id === s);
+              const isActive = siteFilter === s;
+              return (
+                <button key={s} onClick={() => setSiteFilter(s)} style={{
+                  background: isActive ? (cfg?.color + '22') : 'transparent',
+                  border:`1px solid ${isActive ? (cfg?.color || T.border2) : T.border}`,
+                  color: isActive ? (cfg?.color || T.text1) : T.text3,
+                  fontSize:9, padding:'2px 7px', borderRadius:10, cursor:'pointer', fontFamily:'IBM Plex Sans, system-ui',
+                  transition:'all 0.15s',
+                }}>{cfg?.label || s}</button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {/* Claims list */}
+      <div style={{ flex:1, overflowY:'auto', padding:'8px 10px', display:'flex', flexDirection:'column', gap:6 }}>
+        {filtered.length === 0 && (
+          <div style={{ textAlign:'center', color:T.text3, fontSize:11, marginTop:30 }}>No claims match this filter</div>
+        )}
+        {filtered.map(c => <ClaimCard key={c.id} claim={c} onSave={onSave} isNew={newIds.includes(c.id)} />)}
+      </div>
+    </div>
+  );
+}
+
+/* ── INBOX TAB ── */
+function InboxTab({ items, currentProject, onProjectChange }) {
+  const [selected, setSelected] = useState(new Set());
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false);
+  const toggle = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      <div style={{ padding:'8px 12px', borderBottom:`1px solid ${T.border}`, background:T.bg2, display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <span style={{ fontSize:10, color:T.text3, flexShrink:0 }}>Project</span>
+        <select value={currentProject} onChange={e => onProjectChange(e.target.value)} style={{ flex:1, background:T.bg3, border:`1px solid ${T.border}`, color:T.text1, fontSize:11, padding:'3px 6px', borderRadius:4, fontFamily:'IBM Plex Sans, system-ui' }}>
+          {PROJECTS.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <button style={{ background:'transparent', border:`1px solid ${T.border}`, color:T.text3, fontSize:10, padding:'3px 7px', borderRadius:4, cursor:'pointer', flexShrink:0 }}>+ New</button>
+      </div>
+      {selected.size > 0 && (
+        <div style={{ padding:'6px 12px', background:T.blueBg, borderBottom:`1px solid ${T.blueDim}`, display:'flex', alignItems:'center', gap:8, animation:'slideInDown 0.2s ease', flexShrink:0 }}>
+          <span style={{ fontSize:10, color:T.blue }}>{selected.size} selected</span>
+          <button onClick={() => setShowDraftPrompt(true)} style={{ marginLeft:'auto', background:T.blue, border:'none', color:'#fff', fontSize:10, padding:'4px 10px', borderRadius:4, cursor:'pointer', fontWeight:600 }}>Draft Review →</button>
+        </div>
+      )}
+      <div style={{ flex:1, overflowY:'auto', padding:'8px 10px', display:'flex', flexDirection:'column', gap:6 }}>
+        {items.length === 0 && (
+          <div style={{ textAlign:'center', color:T.text3, fontSize:11, marginTop:40, lineHeight:1.7 }}>
+            <div style={{ fontSize:20, marginBottom:8 }}>📥</div>
+            No saved claims yet.<br/>Verify claims and click "Save to Inbox"
+          </div>
+        )}
+        {items.map(item => (
+          <div key={item.id} onClick={() => toggle(item.id)} style={{ background: selected.has(item.id) ? T.blueBg : T.bg2, border:`1px solid ${selected.has(item.id) ? T.blueDim : T.border}`, borderRadius:7, padding:'9px 10px', cursor:'pointer', transition:'all 0.15s' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <Checkbox checked={selected.has(item.id)} onChange={() => toggle(item.id)} />
+              <StatusBadge status={item.status} mini />
+              <span style={{ fontSize:9, color:T.text3, marginLeft:'auto' }}>{item.savedAt}</span>
+            </div>
+            <p style={{ fontSize:11, color:T.text1, lineHeight:1.5, marginTop:5, fontStyle:'italic' }}>{item.text}</p>
+            <p style={{ fontSize:10, color:T.text3, marginTop:3 }}>{item.paperTitle}</p>
+            {item.quote && (
+              <div style={{ marginTop:5, background:T.bg3, borderLeft:`2px solid ${T.greenDim}`, borderRadius:'0 3px 3px 0', padding:'4px 7px' }}>
+                <p style={{ fontSize:10, color:T.text2, fontFamily:'IBM Plex Mono, monospace', lineHeight:1.4 }}>{item.quote}</p>
+              </div>
+            )}
+            <button onClick={e => e.stopPropagation()} style={{ background:'transparent', border:'none', color:T.text3, fontSize:10, padding:'5px 0 0', cursor:'pointer' }}>Export ↗</button>
+          </div>
+        ))}
+      </div>
+      {showDraftPrompt && (
+        <div style={{ padding:'10px 12px', borderTop:`1px solid ${T.border}`, background:T.bg2, animation:'slideInDown 0.2s ease', flexShrink:0 }}>
+          <div style={{ fontSize:11, color:T.text2, marginBottom:6 }}>Draft from {selected.size} claim{selected.size>1?'s':''}?</div>
+          <div style={{ display:'flex', gap:5 }}>
+            <button onClick={() => setShowDraftPrompt(false)} style={{ background:T.blue, border:'none', color:'#fff', fontSize:10, padding:'5px 12px', borderRadius:4, cursor:'pointer', fontWeight:600 }}>Generate Draft</button>
+            <button onClick={() => setShowDraftPrompt(false)} style={{ background:'transparent', border:`1px solid ${T.border}`, color:T.text3, fontSize:10, padding:'5px 10px', borderRadius:4, cursor:'pointer' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── CONFLICT DETECTOR TAB ── */
+function ConflictTab({ conflicts, onResolve }) {
+  const [expanded, setExpanded] = useState(new Set(['cf1']));
+  const toggle = (id) => setExpanded(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      {/* Header */}
+      <div style={{ padding:'8px 12px', borderBottom:`1px solid ${T.border}`, background:T.bg2, flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:7, height:7, borderRadius:4, background:T.red, animation:'pulseDot 1.5s infinite', flexShrink:0 }} />
+          <span style={{ fontSize:10, color:T.text2 }}>{conflicts.filter(c=>!c.resolution).length} conflict{conflicts.filter(c=>!c.resolution).length!==1?'s':''} detected across tools</span>
+        </div>
+        <p style={{ fontSize:10, color:T.text3, marginTop:4, lineHeight:1.5 }}>
+          Same paper summarized differently across Elicit, Consensus, SciSpace. Review and decide which to trust.
+        </p>
+      </div>
+
+      <div style={{ flex:1, overflowY:'auto', padding:'8px 10px', display:'flex', flexDirection:'column', gap:8 }}>
+        {conflicts.length === 0 && (
+          <div style={{ textAlign:'center', color:T.text3, fontSize:11, marginTop:40, lineHeight:1.8 }}>
+            <div style={{ fontSize:20, marginBottom:8 }}>✓</div>
+            No conflicts found.<br/>Tools agree on all shared papers.
+          </div>
+        )}
+
+        {conflicts.map(cf => (
+          <div key={cf.id} style={{
+            background: cf.resolution ? T.bg2 : T.bg2,
+            border:`1px solid ${cf.resolution ? T.border : T.redDim}`,
+            borderRadius:8, overflow:'hidden',
+            animation: cf.resolution ? 'none' : 'conflictPulse 3s infinite',
+          }}>
+            {/* Conflict header */}
+            <div onClick={() => toggle(cf.id)} style={{ padding:'9px 11px', cursor:'pointer', display:'flex', alignItems:'flex-start', gap:8 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+                  {cf.resolution
+                    ? <span style={{ fontSize:9, fontWeight:600, color:T.green, background:T.greenBg, border:`1px solid ${T.greenDim}`, borderRadius:4, padding:'1px 5px' }}>RESOLVED</span>
+                    : <span style={{ fontSize:9, fontWeight:600, color:T.red, background:T.redBg, border:`1px solid ${T.redDim}`, borderRadius:4, padding:'1px 5px' }}>⚡ CONFLICT</span>
+                  }
+                  <span style={{ fontSize:9, color:T.text3 }}>{cf.flaggedAt}</span>
+                </div>
+                <p style={{ fontSize:11, color:T.text1, fontWeight:500 }}>{cf.paper}</p>
+                <p style={{ fontSize:10, color:T.text3 }}>{cf.topic}</p>
+              </div>
+              <span style={{ fontSize:10, color:T.text3, flexShrink:0, marginTop:2 }}>{expanded.has(cf.id) ? '▲' : '▼'}</span>
+            </div>
+
+            {/* Expanded: side-by-side */}
+            {expanded.has(cf.id) && (
+              <div style={{ borderTop:`1px solid ${T.border}`, animation:'fadeSlideIn 0.2s ease' }}>
+                {/* Side by side claims */}
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:0 }}>
+                  {cf.sides.map((side, i) => (
+                    <div key={i} style={{
+                      padding:'10px 11px',
+                      borderRight: i===0 ? `1px solid ${T.border}` : 'none',
+                      background: cf.resolution === side.site ? T.greenBg : 'transparent',
+                      transition:'background 0.2s',
+                    }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:6 }}>
+                        <div style={{ width:6, height:6, borderRadius:3, background:side.color, flexShrink:0 }} />
+                        <span style={{ fontSize:9, fontWeight:600, color:side.color, textTransform:'uppercase', letterSpacing:'0.05em' }}>{side.site}</span>
+                        <StatusBadge status={side.status} mini />
+                      </div>
+                      <p style={{ fontSize:10, color:T.text1, lineHeight:1.5, fontStyle:'italic', marginBottom:6 }}>{side.claim}</p>
+                      <ConfidenceBar value={side.confidence} />
+                      {!cf.resolution && (
+                        <button onClick={() => onResolve(cf.id, side.site)} style={{
+                          marginTop:8, width:'100%', background:T.bg3, border:`1px solid ${T.border}`,
+                          color:T.text2, fontSize:9, padding:'4px', borderRadius:4, cursor:'pointer',
+                          transition:'all 0.15s',
+                        }}>
+                          Trust {side.site} →
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Resolution banner */}
+                {cf.resolution && (
+                  <div style={{ padding:'8px 11px', borderTop:`1px solid ${T.border}`, background:T.greenBg, display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:10, color:T.green }}>✓ Trusting <strong>{cf.resolution}</strong> for this paper</span>
+                    <button onClick={() => onResolve(cf.id, null)} style={{ marginLeft:'auto', background:'transparent', border:'none', color:T.text3, fontSize:9, cursor:'pointer' }}>Undo</button>
+                  </div>
+                )}
+
+                {/* DOI link */}
+                {cf.doi && (
+                  <div style={{ padding:'6px 11px', borderTop:`1px solid ${T.border}`, background:T.bg3 }}>
+                    <span style={{ fontSize:9, color:T.text3 }}>DOI: </span>
+                    <span style={{ fontSize:9, color:T.blue, fontFamily:'IBM Plex Mono, monospace' }}>{cf.doi}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── CHAT TAB ── */
+function ChatTab({ inboxCount }) {
+  const [messages, setMessages] = useState(MOCK_CHAT);
+  const [input, setInput] = useState('');
+  const [isThinking, setIsThinking] = useState(false);
+  const [streamText, setStreamText] = useState('');
+  const bottomRef = useRef(null);
+  useEffect(() => { if (bottomRef.current) bottomRef.current.scrollTop = bottomRef.current.scrollHeight; }, [messages, streamText]);
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+    const q = input.trim(); setInput('');
+    setMessages(m => [...m, { role:'user', text: q }]);
+    setIsThinking(true); setStreamText('');
+    const reply = 'Based on the ' + inboxCount + ' verified claims in your inbox, I can identify several patterns across the selected studies. The evidence consistently points toward sleep-dependent consolidation as a multi-stage process.\n\nI only synthesize from verified claims — no unverified data is included.';
+    let i = 0;
+    const iv = setInterval(() => {
+      i += 3; setStreamText(reply.slice(0, i));
+      if (i >= reply.length) { clearInterval(iv); setIsThinking(false); setMessages(m => [...m, { role:'assistant', text: reply }]); setStreamText(''); }
+    }, 22);
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      <div style={{ padding:'6px 12px', background:T.blueBg, borderBottom:`1px solid ${T.blueDim}`, display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
+        <span style={{ fontSize:9, color:T.blue, fontWeight:600 }}>CONTEXT</span>
+        <span style={{ fontSize:10, color:T.text2 }}>{inboxCount} verified claims · Sleep & Memory</span>
+      </div>
+      <div ref={bottomRef} style={{ flex:1, overflowY:'auto', padding:'10px 12px', display:'flex', flexDirection:'column', gap:8 }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ animation:'fadeSlideIn 0.25s ease' }}>
+            {m.role==='user'
+              ? <div style={{ display:'flex', justifyContent:'flex-end' }}><div style={{ background:T.bg3, border:`1px solid ${T.border2}`, borderRadius:'8px 8px 2px 8px', padding:'7px 10px', maxWidth:'85%' }}><p style={{ fontSize:11, color:T.text1, lineHeight:1.5 }}>{m.text}</p></div></div>
+              : <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:'2px 8px 8px 8px', padding:'8px 10px' }}><p style={{ fontSize:11, color:T.text2, lineHeight:1.7, whiteSpace:'pre-line' }}>{m.text}</p></div>
+            }
+          </div>
+        ))}
+        {isThinking && streamText && (
+          <div style={{ background:T.bg2, border:`1px solid ${T.border}`, borderRadius:'2px 8px 8px 8px', padding:'8px 10px' }}>
+            <p style={{ fontSize:11, color:T.text2, lineHeight:1.7, whiteSpace:'pre-line' }}>{streamText}<span style={{ display:'inline-block', width:8, height:12, background:T.blue, borderRadius:1, marginLeft:2, animation:'pulseDot 0.7s infinite' }} /></p>
+          </div>
+        )}
+        {isThinking && !streamText && (
+          <div style={{ display:'flex', gap:4, padding:'6px 0' }}>
+            {[0,1,2].map(i => <span key={i} style={{ width:6, height:6, borderRadius:3, background:T.text3, animation:`pulseDot 1s ${i*0.2}s infinite` }} />)}
+          </div>
+        )}
+      </div>
+      <div style={{ padding:'8px 10px', borderTop:`1px solid ${T.border}`, background:T.bg2, flexShrink:0 }}>
+        <div style={{ display:'flex', gap:6 }}>
+          <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==='Enter' && handleSend()}
+            placeholder="Ask about verified claims…"
+            style={{ flex:1, background:T.bg3, border:`1px solid ${T.border}`, color:T.text1, fontSize:11, padding:'7px 9px', borderRadius:5, fontFamily:'IBM Plex Sans, system-ui', outline:'none' }} />
+          <button onClick={handleSend} disabled={!input.trim()} style={{ background:T.blue, border:'none', color:'#fff', fontSize:11, padding:'7px 11px', borderRadius:5, cursor: input.trim()?'pointer':'not-allowed', opacity: input.trim()?1:0.4, fontWeight:600 }}>↑</button>
+        </div>
+        <p style={{ fontSize:9, color:T.text3, marginTop:4 }}>Grounded in verified claims only</p>
+      </div>
+    </div>
+  );
+}
+
+/* ── DRAFT TAB ── */
+function DraftTab({ inboxItems }) {
+  const [selected, setSelected] = useState(new Set(['i1','i2','i3']));
+  const [format, setFormat] = useState('APA');
+  const [draft, setDraft] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const DRAFT_TEXT = `Sleep plays an active and multi-faceted role in memory consolidation. Walker (2017) demonstrated that sleep increases memory consolidation by 40% compared to wakefulness, with hippocampal replay during slow-wave sleep as the primary mechanism. This is supported by Stickgold (2005), who established that NREM slow oscillations coordinate hippocampal-neocortical dialogue necessary for long-term memory transfer. Furthermore, Harrison and Horne (2000) showed that deep sleep deprivation causes a 37% cognitive decline within 24 hours, underscoring the essential nature of sleep for cognitive function.`;
+  const generateDraft = () => {
+    setGenerating(true); setDraft('');
+    let i = 0;
+    const iv = setInterval(() => { i += 4; setDraft(DRAFT_TEXT.slice(0, i)); if (i >= DRAFT_TEXT.length) { clearInterval(iv); setGenerating(false); } }, 18);
+  };
+  const toggleSelect = (id) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', overflow:'hidden' }}>
+      <div style={{ padding:'8px 10px', borderBottom:`1px solid ${T.border}`, background:T.bg2, flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+          <span style={{ fontSize:10, color:T.text3 }}>Select claims to include</span>
+          <span style={{ fontSize:9, color:T.text3 }}>{selected.size}/{inboxItems.length}</span>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          {inboxItems.map(item => (
+            <label key={item.id} style={{ display:'flex', alignItems:'flex-start', gap:7, cursor:'pointer' }}>
+              <Checkbox checked={selected.has(item.id)} onChange={() => toggleSelect(item.id)} size={13} />
+              <span style={{ fontSize:10, color:T.text2, lineHeight:1.4 }}>{item.paperTitle}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:'8px 10px', borderBottom:`1px solid ${T.border}`, background:T.bg2, display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <span style={{ fontSize:10, color:T.text3 }}>Format</span>
+        {['APA','MLA','Vancouver'].map(f => (
+          <button key={f} onClick={() => setFormat(f)} style={{ background: format===f ? T.border2 : 'transparent', border:`1px solid ${format===f ? T.border2 : T.border}`, color: format===f ? T.text1 : T.text3, fontSize:9, padding:'2px 7px', borderRadius:4, cursor:'pointer' }}>{f}</button>
+        ))}
+        <button onClick={generateDraft} disabled={generating||selected.size===0} style={{ marginLeft:'auto', background:T.blue, border:'none', color:'#fff', fontSize:10, padding:'4px 10px', borderRadius:4, cursor:(generating||selected.size===0)?'not-allowed':'pointer', opacity:(generating||selected.size===0)?0.5:1, fontWeight:600 }}>
+          {generating ? 'Generating…' : 'Generate'}
+        </button>
+      </div>
+      <div style={{ flex:1, padding:'10px', overflowY:'auto' }}>
+        {!draft && !generating && (
+          <div style={{ textAlign:'center', color:T.text3, fontSize:11, marginTop:30, lineHeight:1.8 }}>
+            <div style={{ fontSize:20, marginBottom:8 }}>✍️</div>
+            Select claims above and click Generate
+          </div>
+        )}
+        {(draft || generating) && (
+          <div>
+            <div style={{ background:T.bg3, border:`1px solid ${T.border}`, borderRadius:6, padding:'10px 12px' }}>
+              <p style={{ fontSize:11, color:T.text1, lineHeight:1.8, whiteSpace:'pre-line' }}>
+                {draft}{generating && <span style={{ display:'inline-block', width:8, height:12, background:T.blue, borderRadius:1, marginLeft:2, animation:'pulseDot 0.7s infinite' }} />}
+              </p>
+            </div>
+            {!generating && draft && (
+              <div style={{ display:'flex', gap:6, marginTop:8 }}>
+                <button onClick={() => setCopied(true)} style={{ background: copied?T.greenDim:T.bg3, border:`1px solid ${copied?T.greenDim:T.border}`, color: copied?T.green:T.text2, fontSize:10, padding:'5px 12px', borderRadius:4, cursor:'pointer', fontWeight:600 }}>
+                  {copied ? '✓ Copied' : 'Copy'}
+                </button>
+                <button style={{ background:'transparent', border:`1px solid ${T.border}`, color:T.text3, fontSize:10, padding:'5px 10px', borderRadius:4, cursor:'pointer' }}>Export RIS</button>
+                <button style={{ background:'transparent', border:`1px solid ${T.border}`, color:T.text3, fontSize:10, padding:'5px 10px', borderRadius:4, cursor:'pointer' }}>Markdown</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── PROGRESS BAR ── */
+function ProgressBar({ progress, paused, onToggle, activeSites, pausedSites, onToggleSitePause }) {
+  const pct = progress.total > 0 ? Math.round((progress.completed/progress.total)*100) : 0;
+  const isDone = progress.completed >= progress.total;
+  const barColor = isDone ? T.green : paused ? T.text3 : T.amber;
+  return (
+    <div style={{ padding:'5px 12px', borderBottom:`1px solid ${T.border}`, background:T.bg2, flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+        <span style={{ fontSize:10, color: isDone ? T.green : T.text3, minWidth:90 }}>
+          {isDone ? '✓ Done' : paused ? 'Paused' : `Verifying ${progress.completed}/${progress.total}`}
+        </span>
+        <div style={{ flex:1, height:3, background:T.bg3, borderRadius:2, overflow:'hidden' }}>
+          <div style={{ width:`${pct}%`, height:'100%', background: barColor, borderRadius:2, transition:'width 0.6s ease, background 0.3s' }} />
+        </div>
+        <span style={{ fontSize:9, color: isDone ? T.green : T.text3, fontFamily:'IBM Plex Mono, monospace', minWidth:24 }}>{pct}%</span>
+        {!isDone && (
+          <button onClick={onToggle} style={{ background:'transparent', border:'none', color:T.text3, fontSize:9, cursor:'pointer', textDecoration:'underline' }}>{paused?'resume':'pause'}</button>
+        )}
+      </div>
+      {/* Per-site pause chips */}
+      <div style={{ display:'flex', gap:4, marginTop:5 }}>
+        {SITES_CFG.filter(s => activeSites.has(s.id)).map(s => {
+          const sitePaused = pausedSites.has(s.id);
+          return (
+            <button key={s.id} onClick={() => onToggleSitePause(s.id)} title={sitePaused ? `Resume ${s.label}` : `Pause ${s.label}`} style={{
+              display:'flex', alignItems:'center', gap:4,
+              fontSize:8, color: sitePaused ? T.text3 : s.color,
+              background: sitePaused ? T.bg3 : T.bg3,
+              border:`1px solid ${sitePaused ? T.border : s.color+'44'}`,
+              borderRadius:6, padding:'2px 6px', cursor:'pointer',
+              opacity: sitePaused ? 0.5 : 1, transition:'all 0.15s',
+              fontFamily:'IBM Plex Sans, system-ui',
+            }}>
+              <span style={{ fontSize:7 }}>{sitePaused ? '⏸' : '▶'}</span>
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── ONBOARDING ── */
+const ONBOARDING_STEPS = [
+  {
+    id: 'welcome',
+    title: 'Welcome to ResearchKit',
+    subtitle: 'Your AI-powered claim verifier for academic research',
+    visual: (
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+        <div style={{ width:56, height:56, borderRadius:14, background:`linear-gradient(135deg, #5b9cf6 0%, #a78bfa 100%)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <span style={{ fontSize:26, fontWeight:700, color:'#fff', fontFamily:'IBM Plex Mono, monospace' }}>R</span>
+        </div>
+        <div style={{ display:'flex', gap:6 }}>
+          {['Elicit','SciSpace','Consensus'].map((s,i) => (
+            <div key={i} style={{ background:T.bg3, border:`1px solid ${T.border2}`, borderRadius:6, padding:'4px 10px', fontSize:10, color:T.text2 }}>{s}</div>
+          ))}
+        </div>
+      </div>
+    ),
+    body: 'ResearchKit automatically scans claims on Elicit, SciSpace, and Consensus — then verifies each one against the source paper in real time.',
+    cta: 'Get started →',
+  },
+  {
+    id: 'sites',
+    title: 'Choose your tools',
+    subtitle: 'Select which AI research sites to monitor',
+    visual: (
+      <div style={{ display:'flex', flexDirection:'column', gap:6, width:'100%' }}>
+        {SITES_CFG.map(s => (
+          <div key={s.id} style={{ display:'flex', alignItems:'center', gap:10, background:T.bg3, border:`1px solid ${s.color}33`, borderRadius:7, padding:'8px 10px' }}>
+            <div style={{ width:8, height:8, borderRadius:4, background:s.color, flexShrink:0 }} />
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:11, color:T.text1, fontWeight:500 }}>{s.label}</p>
+              <p style={{ fontSize:10, color:T.text3 }}>{s.desc}</p>
+            </div>
+            <div style={{ width:28, height:15, borderRadius:8, background:T.greenDim, border:`1px solid ${T.greenDim}`, position:'relative' }}>
+              <div style={{ position:'absolute', top:2, left:14, width:9, height:9, borderRadius:5, background:T.green }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+    body: 'You can toggle any site on/off from the header anytime — or pause a single site without losing your others.',
+    cta: 'Next →',
+  },
+  {
+    id: 'verify',
+    title: 'How verification works',
+    subtitle: 'Every claim gets a badge, automatically',
+    visual: (
+      <div style={{ display:'flex', flexDirection:'column', gap:5, width:'100%' }}>
+        {[
+          { status:'verified', label:'Verified', desc:'Found verbatim in full text', color:T.green, bg:T.greenBg, border:T.greenDim },
+          { status:'partial',  label:'Partial',  desc:'Abstract match — PDF needed', color:T.amber, bg:T.amberBg, border:T.amberDim },
+          { status:'not_found',label:'Not found',desc:'Claim absent from paper',     color:T.red,   bg:T.redBg,   border:T.redDim   },
+        ].map(item => (
+          <div key={item.status} style={{ display:'flex', alignItems:'center', gap:8, background:item.bg, border:`1px solid ${item.border}`, borderRadius:6, padding:'7px 10px' }}>
+            <span style={{ fontSize:10, fontWeight:700, color:item.color, fontFamily:'IBM Plex Mono, monospace', minWidth:18 }}>
+              {item.status==='verified'?'✓':item.status==='partial'?'~':'✕'}
+            </span>
+            <div style={{ flex:1 }}>
+              <p style={{ fontSize:10, color:item.color, fontWeight:600 }}>{item.label}</p>
+              <p style={{ fontSize:9, color:T.text3 }}>{item.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+    body: 'Click any claim card to see the verbatim quote, confidence score, and save it to your Inbox for later use.',
+    cta: 'Next →',
+  },
+  {
+    id: 'pipeline',
+    title: 'From claims to literature',
+    subtitle: 'A 4-step research pipeline',
+    visual: (
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:0, width:'100%' }}>
+        {[
+          { icon:'✓', label:'Verify',   color:T.amber  },
+          { icon:'→', label:'',         color:T.text3, arrow:true },
+          { icon:'↓', label:'Inbox',    color:T.blue   },
+          { icon:'→', label:'',         color:T.text3, arrow:true },
+          { icon:'◉', label:'Chat',     color:T.purple },
+          { icon:'→', label:'',         color:T.text3, arrow:true },
+          { icon:'≡', label:'Draft',    color:T.green  },
+        ].map((step, i) => step.arrow ? (
+          <span key={i} style={{ fontSize:12, color:T.border2, margin:'0 2px' }}>→</span>
+        ) : (
+          <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+            <div style={{ width:36, height:36, borderRadius:9, background:T.bg3, border:`1px solid ${T.border2}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <span style={{ fontSize:14, color:step.color }}>{step.icon}</span>
+            </div>
+            <span style={{ fontSize:9, color:T.text3 }}>{step.label}</span>
+          </div>
+        ))}
+      </div>
+    ),
+    body: 'Verify claims → Save to Inbox → Ask AI Chat questions grounded in verified data → Generate a cited Draft paragraph ready for export.',
+    cta: 'Next →',
+  },
+  {
+    id: 'done',
+    title: "You're all set!",
+    subtitle: 'ResearchKit is ready to verify',
+    visual: (
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+        <div style={{ width:52, height:52, borderRadius:26, background:T.greenBg, border:`2px solid ${T.greenDim}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <span style={{ fontSize:22, color:T.green }}>✓</span>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:4, width:'100%' }}>
+          {['Open Elicit, SciSpace, or Consensus','Claims scan automatically','Save & draft your literature review'].map((tip,i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:7, background:T.bg3, borderRadius:5, padding:'5px 8px' }}>
+              <span style={{ fontSize:9, color:T.green, fontWeight:700 }}>{i+1}</span>
+              <span style={{ fontSize:10, color:T.text2 }}>{tip}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+    body: 'Need help later? Open the Help tab (?) at any time to replay this guide or browse feature docs.',
+    cta: 'Start verifying →',
+  },
+];
+
+function OnboardingOverlay({ onComplete }) {
+  const [step, setStep] = useState(0);
+  const total = ONBOARDING_STEPS.length;
+  const current = ONBOARDING_STEPS[step];
+  const isLast = step === total - 1;
+
+  return (
+    <div style={{
+      position:'absolute', inset:0, zIndex:400,
+      background:T.bg0, display:'flex', flexDirection:'column',
+      animation:'fadeSlideIn 0.3s ease',
+    }}>
+      {/* Skip */}
+      <div style={{ padding:'10px 14px', display:'flex', justifyContent:'flex-end' }}>
+        <button onClick={onComplete} style={{ background:'transparent', border:'none', color:T.text3, fontSize:10, cursor:'pointer' }}>Skip</button>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex:1, overflowY:'auto', padding:'0 20px 20px', display:'flex', flexDirection:'column', gap:16 }}>
+        {/* Step indicator */}
+        <div style={{ display:'flex', gap:5, justifyContent:'center' }}>
+          {ONBOARDING_STEPS.map((_,i) => (
+            <div key={i} onClick={() => setStep(i)} style={{
+              height:3, borderRadius:2, cursor:'pointer', transition:'all 0.25s',
+              width: i===step ? 20 : 8,
+              background: i===step ? T.blue : i<step ? T.greenDim : T.border2,
+            }} />
+          ))}
+        </div>
+
+        {/* Visual */}
+        <div style={{ minHeight:130, display:'flex', alignItems:'center', justifyContent:'center', background:T.bg2, border:`1px solid ${T.border}`, borderRadius:10, padding:'16px 14px' }}>
+          {current.visual}
+        </div>
+
+        {/* Text */}
+        <div>
+          <p style={{ fontSize:9, fontWeight:600, color:T.blue, letterSpacing:'0.08em', marginBottom:4, textTransform:'uppercase' }}>{current.subtitle}</p>
+          <h2 style={{ fontSize:16, fontWeight:600, color:T.text1, marginBottom:8, lineHeight:1.3 }}>{current.title}</h2>
+          <p style={{ fontSize:11, color:T.text2, lineHeight:1.7 }}>{current.body}</p>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ padding:'12px 20px', borderTop:`1px solid ${T.border}`, background:T.bg1, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <button onClick={() => setStep(s => Math.max(0, s-1))} style={{
+          background:'transparent', border:`1px solid ${T.border}`, color:T.text3,
+          fontSize:11, padding:'7px 14px', borderRadius:5, cursor: step===0?'not-allowed':'pointer', opacity: step===0?0.3:1,
+        }}>← Back</button>
+        <span style={{ fontSize:9, color:T.text3 }}>{step+1} / {total}</span>
+        <button onClick={() => isLast ? onComplete() : setStep(s=>s+1)} style={{
+          background: isLast ? T.green : T.blue, border:'none',
+          color: isLast ? T.bg0 : '#fff',
+          fontSize:11, fontWeight:600, padding:'7px 18px', borderRadius:5, cursor:'pointer',
+          transition:'background 0.2s',
+        }}>{current.cta}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── HELP TAB ── */
+const HELP_SECTIONS = [
+  {
+    id:'verify', icon:'✓', title:'Verify Tab',
+    items:[
+      { q:'What do the badges mean?', a:'✓ Verified = found verbatim in full text. ~ Partial = abstract-only match, PDF needed for full confidence. ✕ Not found = claim absent from paper.' },
+      { q:'How do I filter claims?', a:'Use the status pills (verified / partial / not found) and site pills (Elicit / SciSpace / Consensus) below the summary row. Filters combine — e.g. only "partial" from "Elicit".' },
+      { q:'Can I pause verification?', a:'Yes — globally with the pause/resume link in the progress bar, or per-site by clicking the site chip buttons (▶/⏸) in the progress bar.' },
+    ],
+  },
+  {
+    id:'sites', icon:'●', title:'Site Selector',
+    items:[
+      { q:'How do I enable/disable a site?', a:'Click the site pill in the header (Elicit · SciSpace · Consensus) to toggle it on/off. Disabled sites are fully ignored — no API calls, no badges, no claims.' },
+      { q:'What is the difference between disable and pause?', a:'Disable (header pill) = permanently off until re-enabled. Pause (progress bar chip) = temporarily stops new claims from that site, but it stays "active" and resumes when you click again.' },
+    ],
+  },
+  {
+    id:'inbox', icon:'↓', title:'Inbox',
+    items:[
+      { q:'How do I save a claim?', a:'Expand any verified claim card in the Verify tab and click "+ Save to Inbox". Partial claims can also be saved.' },
+      { q:'How do I organize claims by project?', a:'Use the Project selector at the top of the Inbox tab. Claims are saved to the currently selected project. Create a new project with "+ New".' },
+      { q:'Can I select multiple claims?', a:'Yes — click any inbox item to select it (checkbox). Select multiple, then click "Draft Review →" to send them to the AI drafter.' },
+    ],
+  },
+  {
+    id:'conflicts', icon:'⚡', title:'Conflict Detector',
+    items:[
+      { q:'What triggers a conflict?', a:'When Elicit, Consensus, or SciSpace summarize the same paper differently — e.g. contradictory claims about the same finding — ResearchKit flags it automatically.' },
+      { q:'How do I resolve a conflict?', a:'Expand the conflict card, review the side-by-side claims and confidence scores, then click "Trust [site] →" for the source you believe. You can Undo any time.' },
+    ],
+  },
+  {
+    id:'chat', icon:'◉', title:'AI Chat',
+    items:[
+      { q:'What data does the AI use?', a:'Only verified claims saved to your Inbox. The chat never synthesizes from partial or unverified data — this is by design to prevent hallucination.' },
+      { q:'Which AI provider is used?', a:'Claude (Anthropic) by default. You can switch to GPT-4o or Gemini 2.0 in Settings → AI Provider.' },
+    ],
+  },
+  {
+    id:'draft', icon:'≡', title:'Literature Draft',
+    items:[
+      { q:'How do I generate a draft?', a:'Go to the Draft tab, select which inbox claims to include (checkboxes), choose a citation format (APA / MLA / Vancouver), then click Generate.' },
+      { q:'How do I export?', a:'After generation, click Copy to copy to clipboard, Export RIS to import into Zotero/Mendeley, or Markdown for Obsidian/Notion.' },
+    ],
+  },
+];
+
+function HelpTab({ onReplayOnboarding }) {
+  const [openSection, setOpenSection] = useState('verify');
+  const [openItem, setOpenItem] = useState(null);
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      {/* Header */}
+      <div style={{ padding:'10px 12px', borderBottom:`1px solid ${T.border}`, background:T.bg2, flexShrink:0 }}>
+        <p style={{ fontSize:13, fontWeight:600, color:T.text1, marginBottom:2 }}>Help & Documentation</p>
+        <p style={{ fontSize:10, color:T.text3 }}>Browse by feature or replay the intro guide</p>
+      </div>
+
+      {/* Replay onboarding */}
+      <div style={{ padding:'8px 12px', borderBottom:`1px solid ${T.border}`, flexShrink:0 }}>
+        <button onClick={onReplayOnboarding} style={{
+          width:'100%', background:T.bg3, border:`1px solid ${T.border2}`,
+          color:T.text1, fontSize:11, padding:'8px 12px', borderRadius:6, cursor:'pointer',
+          display:'flex', alignItems:'center', gap:8, transition:'background 0.15s',
+        }}>
+          <span style={{ fontSize:14 }}>▷</span>
+          <div style={{ textAlign:'left' }}>
+            <p style={{ fontWeight:500 }}>Replay intro guide</p>
+            <p style={{ fontSize:9, color:T.text3 }}>Walk through all features step by step</p>
+          </div>
+          <span style={{ marginLeft:'auto', color:T.text3, fontSize:10 }}>→</span>
+        </button>
+      </div>
+
+      {/* Accordion */}
+      <div style={{ flex:1, overflowY:'auto', padding:'8px 10px', display:'flex', flexDirection:'column', gap:4 }}>
+        {HELP_SECTIONS.map(section => (
+          <div key={section.id} style={{ background:T.bg2, border:`1px solid ${openSection===section.id ? T.border2 : T.border}`, borderRadius:7, overflow:'hidden', transition:'border-color 0.15s' }}>
+            {/* Section header */}
+            <button onClick={() => setOpenSection(openSection===section.id ? null : section.id)} style={{
+              width:'100%', background:'transparent', border:'none', padding:'9px 11px',
+              display:'flex', alignItems:'center', gap:8, cursor:'pointer', color:T.text1,
+            }}>
+              <span style={{ fontSize:12, color:T.text3, minWidth:16 }}>{section.icon}</span>
+              <span style={{ fontSize:11, fontWeight:500, flex:1, textAlign:'left' }}>{section.title}</span>
+              <span style={{ fontSize:10, color:T.text3, transition:'transform 0.2s', display:'inline-block', transform: openSection===section.id ? 'rotate(180deg)' : 'none' }}>▼</span>
+            </button>
+
+            {/* Section items */}
+            {openSection===section.id && (
+              <div style={{ borderTop:`1px solid ${T.border}`, animation:'fadeSlideIn 0.18s ease' }}>
+                {section.items.map((item, i) => (
+                  <div key={i} style={{ borderBottom: i<section.items.length-1 ? `1px solid ${T.border}` : 'none' }}>
+                    <button onClick={() => setOpenItem(openItem===`${section.id}-${i}` ? null : `${section.id}-${i}`)} style={{
+                      width:'100%', background:'transparent', border:'none',
+                      padding:'8px 12px', cursor:'pointer', display:'flex', alignItems:'center', gap:8, textAlign:'left',
+                    }}>
+                      <span style={{ fontSize:9, color:T.blue, minWidth:10 }}>{openItem===`${section.id}-${i}` ? '▼' : '›'}</span>
+                      <span style={{ fontSize:10, color:T.text2, flex:1 }}>{item.q}</span>
+                    </button>
+                    {openItem===`${section.id}-${i}` && (
+                      <div style={{ padding:'0 12px 10px 22px', animation:'fadeSlideIn 0.15s ease' }}>
+                        <p style={{ fontSize:10, color:T.text3, lineHeight:1.65 }}>{item.a}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Version note */}
+        <div style={{ padding:'10px 12px', marginTop:4, background:T.bg2, border:`1px solid ${T.border}`, borderRadius:7, display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ width:20, height:20, borderRadius:5, background:`linear-gradient(135deg, ${T.blue} 0%, ${T.purple} 100%)`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <span style={{ fontSize:10, fontWeight:700, color:'#fff', fontFamily:'IBM Plex Mono, monospace' }}>R</span>
+          </div>
+          <div>
+            <p style={{ fontSize:10, color:T.text2, fontWeight:500 }}>ResearchKit v0.2</p>
+            <p style={{ fontSize:9, color:T.text3 }}>Phase 1 MVP · Phase 2 coming soon</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── TOAST ── */
+function Toast({ message, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2500); return () => clearTimeout(t); }, []);
+  return (
+    <div style={{ position:'absolute', bottom:50, left:'50%', transform:'translateX(-50%)', background:T.bg3, border:`1px solid ${T.greenDim}`, borderRadius:6, padding:'6px 14px', fontSize:10, color:T.green, fontWeight:600, whiteSpace:'nowrap', animation:'toastIn 0.25s ease', boxShadow:`0 4px 20px rgba(0,0,0,0.5)`, zIndex:300 }}>
+      {message}
+    </div>
+  );
+}
+
+/* ── MAIN SIDEBAR ── */
+function Sidebar({ accentColor, sidebarWidth }) {
+  const [onboardingDone, setOnboardingDone] = useState(() => {
+    try { return localStorage.getItem('rk_onboarding_done') === '1'; } catch { return false; }
+  });
+  const completeOnboarding = () => {
+    try { localStorage.setItem('rk_onboarding_done', '1'); } catch {}
+    setOnboardingDone(true);
+  };
+  const replayOnboarding = () => setOnboardingDone(false);
+
+  const [tab, setTab] = useState('verify');
+  const [verifyOn, setVerifyOn] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const [claims, setClaims] = useState(ALL_CLAIMS.slice(0, 4));
+  const [inboxItems, setInboxItems] = useState(MOCK_INBOX);
+  const [project, setProject] = useState('Sleep & Memory');
+  const [toast, setToast] = useState(null);
+  const [progress, setProgress] = useState({ total:12, completed:4 });
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeSites, setActiveSites] = useState(new Set(['elicit','scispace','consensus']));
+  const [pausedSites, setPausedSites] = useState(new Set());
+  const [provider, setProvider] = useState('anthropic');
+  const [autoVerify, setAutoVerify] = useState(true);
+  const [verifyDelay, setVerifyDelay] = useState(1.5);
+  const [conflicts, setConflicts] = useState(MOCK_CONFLICTS);
+
+  const isDone = progress.completed >= progress.total;
+
+  // Simulate progressive verification
+  useEffect(() => {
+    if (!verifyOn || paused || isDone) return;
+    const t = setTimeout(() => {
+      if (claims.length < ALL_CLAIMS.length) {
+        const next = ALL_CLAIMS[claims.length];
+        // Skip if site inactive or paused
+        if (activeSites.has(next.site) && !pausedSites.has(next.site)) {
+          setClaims(c => [...c, next]);
+        }
+        setProgress(p => ({ ...p, completed: Math.min(p.completed+1, p.total) }));
+      } else {
+        setProgress(p => ({ ...p, completed: Math.min(p.completed+1, p.total) }));
+      }
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [claims, paused, verifyOn, progress.completed, activeSites, pausedSites, isDone]);
+
+  const handleToggleSitePause = (siteId) => {
+    setPausedSites(s => { const n = new Set(s); n.has(siteId) ? n.delete(siteId) : n.add(siteId); return n; });
+  };
+
+  const handleSave = (claimId) => {
+    const claim = claims.find(c => c.id===claimId);
+    if (!claim) return;
+    setClaims(cs => cs.map(c => c.id===claimId ? {...c, saved:true} : c));
+    setInboxItems(items => [{ id:'i_'+claimId, text:claim.text, paperTitle:claim.paperTitle, quote:claim.quote, project, savedAt:'just now', status:claim.status, confidence:claim.confidence }, ...items]);
+    setToast('✓ Saved to Inbox');
+  };
+
+  const handleToggleSite = (siteId) => {
+    setActiveSites(s => { const n = new Set(s); n.has(siteId) ? n.delete(siteId) : n.add(siteId); return n; });
+  };
+
+  const handleResolveConflict = (cfId, site) => {
+    setConflicts(cs => cs.map(c => c.id===cfId ? {...c, resolution: site} : c));
+    if (site) setToast(`Trusting ${site} for this conflict`);
+  };
+
+  const accent = accentColor==='blue' ? T.blue : accentColor==='purple' ? T.purple : T.amber;
+  const conflictCount = conflicts.filter(c => !c.resolution).length;
+
+  const TABS = [
+    { id:'verify',   label:'Verify',   icon:'✓' },
+    { id:'inbox',    label:'Inbox',    icon:'↓', badge: inboxItems.length },
+    { id:'conflicts',label:'Conflicts',icon:'⚡', badge: conflictCount > 0 ? conflictCount : null, badgeColor: T.red },
+    { id:'chat',     label:'Chat',     icon:'◉' },
+    { id:'draft',    label:'Draft',    icon:'≡' },
+    { id:'help',     label:'Help',     icon:'?' },
+  ];
+
+  return (
+    <div style={{ width: sidebarWidth||440, height:700, background:T.bg1, border:`1px solid ${T.border}`, borderRadius:10, display:'flex', flexDirection:'column', overflow:'hidden', fontFamily:'IBM Plex Sans, system-ui, sans-serif', fontSize:13, color:T.text1, boxShadow:`0 20px 60px rgba(0,0,0,0.7)`, position:'relative' }}>
+
+      {/* HEADER */}
+      <div style={{ background:T.bg0, borderBottom:`1px solid ${T.border}`, padding:'8px 12px', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+        <div style={{ width:22, height:22, borderRadius:5, background:`linear-gradient(135deg, ${T.blue} 0%, ${T.purple} 100%)`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <span style={{ fontSize:11, fontWeight:700, color:'#fff', fontFamily:'IBM Plex Mono, monospace' }}>R</span>
+        </div>
+        <span style={{ fontWeight:600, fontSize:12, letterSpacing:'0.02em', color:T.text1 }}>ResearchKit</span>
+
+        {/* Site pills */}
+        <div style={{ display:'flex', gap:3, marginLeft:4, flex:1, flexWrap:'wrap' }}>
+          {SITES_CFG.map(s => (
+            <button key={s.id} onClick={() => handleToggleSite(s.id)} title={activeSites.has(s.id) ? `Disable ${s.label}` : `Enable ${s.label}`} style={{
+              background: activeSites.has(s.id) ? T.bg3 : 'transparent',
+              border:`1px solid ${activeSites.has(s.id) ? s.color + '55' : T.border}`,
+              color: activeSites.has(s.id) ? s.color : T.text3,
+              fontSize:9, padding:'1px 6px', borderRadius:8, cursor:'pointer',
+              fontFamily:'IBM Plex Sans, system-ui', transition:'all 0.15s',
+              opacity: activeSites.has(s.id) ? 1 : 0.5,
+            }}>
+              <span style={{ marginRight:3, opacity: activeSites.has(s.id) ? 1 : 0.4 }}>●</span>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Right controls */}
+        <div style={{ display:'flex', alignItems:'center', gap:7, flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+            <span style={{ width:6, height:6, borderRadius:3, background: verifyOn?T.green:T.text3, display:'block', animation: verifyOn&&!paused?'pulseDot 2s infinite':'none' }} />
+            <span style={{ fontSize:9, color: verifyOn?T.green:T.text3 }}>{verifyOn?'LIVE':'OFF'}</span>
+          </div>
+          <Toggle value={verifyOn} onChange={setVerifyOn} />
+          <button onClick={() => setSettingsOpen(true)} style={{ background:'transparent', border:'none', color:T.text3, cursor:'pointer', fontSize:14, lineHeight:1, padding:'0 2px' }}>⚙</button>
+        </div>
+      </div>
+
+      {/* PROGRESS BAR */}
+      {verifyOn && <ProgressBar progress={progress} paused={paused} onToggle={() => setPaused(p=>!p)} activeSites={activeSites} pausedSites={pausedSites} onToggleSitePause={handleToggleSitePause} />}
+
+      {/* TABS */}
+      <div style={{ display:'flex', borderBottom:`1px solid ${T.border}`, background:T.bg0, flexShrink:0 }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex:1, padding:'6px 0', display:'flex', flexDirection:'column', alignItems:'center', gap:1, background:'transparent', border:'none', cursor:'pointer', borderBottom: tab===t.id ? `2px solid ${t.badgeColor && tab===t.id ? t.badgeColor : accent}` : '2px solid transparent', color: tab===t.id ? (t.badgeColor||accent) : T.text3, transition:'color 0.15s', position:'relative' }}>
+            <span style={{ fontSize:11 }}>{t.icon}</span>
+            <span style={{ fontSize:8, fontWeight: tab===t.id?600:400 }}>{t.label}</span>
+            {t.badge > 0 && (
+              <span style={{ position:'absolute', top:3, right:'18%', minWidth:14, height:14, borderRadius:7, background: t.badgeColor||accent, color:'#fff', fontSize:8, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 3px' }}>{t.badge}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* TAB CONTENT */}
+      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+        {tab==='verify'    && <VerifyTab claims={claims} onSave={handleSave} activeSites={activeSites} />}
+        {tab==='inbox'     && <InboxTab items={inboxItems} currentProject={project} onProjectChange={setProject} />}
+        {tab==='conflicts' && <ConflictTab conflicts={conflicts} onResolve={handleResolveConflict} />}
+        {tab==='chat'      && <ChatTab inboxCount={inboxItems.length} />}
+        {tab==='draft'     && <DraftTab inboxItems={inboxItems} />}
+        {tab==='help'      && <HelpTab onReplayOnboarding={() => { setTab('verify'); replayOnboarding(); }} />}
+      </div>
+
+      {/* FOOTER */}
+      <div style={{ background:T.bg0, borderTop:`1px solid ${T.border}`, padding:'4px 12px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+        <span style={{ fontSize:9, color: isDone ? T.green : T.text3 }}>
+          {isDone ? `✓ Verified ${progress.total} claims · ` : `${activeSites.size}/${SITES_CFG.length} sites · `}{provider} · v0.2
+        </span>
+        <button onClick={() => setSettingsOpen(true)} style={{ background:'transparent', border:'none', color:T.blue, fontSize:9, cursor:'pointer' }}>Settings</button>
+      </div>
+
+      {/* SETTINGS PANEL (overlay) */}
+      <SettingsPanel
+        open={settingsOpen} onClose={() => setSettingsOpen(false)}
+        activeSites={activeSites} onToggleSite={handleToggleSite}
+        provider={provider} onProviderChange={setProvider}
+        autoVerify={autoVerify} onAutoVerifyChange={setAutoVerify}
+        verifyDelay={verifyDelay} onVerifyDelayChange={setVerifyDelay}
+      />
+
+      {/* ONBOARDING OVERLAY */}
+      {!onboardingDone && <OnboardingOverlay onComplete={completeOnboarding} />}
+
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+/* ── TWEAKS + APP ── */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "amber",
+  "sidebarWidth": 440,
+  "showFloating": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#060a14', padding:24, position:'relative' }}>
+      <Sidebar accentColor={tweaks.accentColor} sidebarWidth={tweaks.sidebarWidth} />
+
+      {tweaks.showFloating && (
+        <div style={{ position:'fixed', bottom:24, right:24, background:T.bg2, border:`1px solid ${T.border}`, borderRadius:20, padding:'5px 10px 5px 7px', display:'flex', alignItems:'center', gap:7, fontSize:10, color:T.text2, boxShadow:`0 4px 20px rgba(0,0,0,0.5)`, cursor:'pointer', zIndex:50 }}>
+          <div style={{ width:18, height:18, borderRadius:9, border:`2px solid ${T.amber}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ width:8, height:8, borderRadius:4, border:`2px solid ${T.amber}`, borderTopColor:'transparent', animation:'spinRing 0.8s linear infinite' }} />
+          </div>
+          <span>Verifying 4/12</span>
+          <div style={{ width:40, height:3, background:T.bg3, borderRadius:2 }}>
+            <div style={{ width:'33%', height:'100%', background:T.amber, borderRadius:2 }} />
+          </div>
+          <span style={{ color:T.text3 }}>33%</span>
+        </div>
+      )}
+
+      <TweaksPanel>
+        <TweakSection title="Accent">
+          <TweakColor label="Theme accent" value={tweaks.accentColor} options={['amber','blue','purple']} onChange={v => setTweak('accentColor', v)} />
+        </TweakSection>
+        <TweakSection title="Layout">
+          <TweakSlider label="Sidebar width" value={tweaks.sidebarWidth} min={360} max={520} step={10} onChange={v => setTweak('sidebarWidth', v)} />
+        </TweakSection>
+        <TweakSection title="Components">
+          <TweakToggle label="Floating indicator" value={tweaks.showFloating} onChange={v => setTweak('showFloating', v)} />
+        </TweakSection>
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+<div id="root"></div>
+</body>
+</html>

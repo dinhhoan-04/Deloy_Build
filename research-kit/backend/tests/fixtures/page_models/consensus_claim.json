@@ -1,0 +1,56 @@
+{
+  "site": "consensus",
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-05-05T00:00:00Z",
+  "url": "https://consensus.app/results?q=exercise+depression",
+  "title": "Consensus – exercise depression",
+  "query": "Does exercise improve depression symptoms?",
+  "answer": {
+    "id": "c7d8e9f0",
+    "text": "Regular exercise significantly reduces depression symptoms, comparable to antidepressant therapy in mild-to-moderate cases.",
+    "paragraphs": [
+      {
+        "id": "p0",
+        "text": "Regular exercise significantly reduces depression symptoms, comparable to antidepressant therapy in mild-to-moderate cases.",
+        "citationIds": ["p1", "p3"]
+      }
+    ]
+  },
+  "citations": [
+    {
+      "id": "p1",
+      "label": "Blumenthal et al., 2007",
+      "url": "https://doi.org/10.1001/jamapsychiatry.2016.2537",
+      "doi": "10.1001/jamapsychiatry.2016.2537",
+      "title": "Exercise and pharmacotherapy in the treatment of major depressive disorder",
+      "rawAnchorText": "Blumenthal et al., 2007",
+      "year": 2007,
+      "stance": "supporting"
+    },
+    {
+      "id": "p2",
+      "label": "Chalder et al., 2012",
+      "url": "https://doi.org/10.1016/j.jpsychires.2013.01.008",
+      "doi": "10.1016/j.jpsychires.2013.01.008",
+      "title": "Facilitated physical activity as a treatment for depressed adults",
+      "rawAnchorText": "Chalder et al., 2012",
+      "year": 2012,
+      "stance": "contradicting"
+    },
+    {
+      "id": "p3",
+      "label": "Cooney et al., 2013",
+      "url": "https://doi.org/10.1136/bmj.g2357",
+      "doi": "10.1136/bmj.g2357",
+      "title": "Exercise for depression (Cochrane review)",
+      "rawAnchorText": "Cooney et al., 2013",
+      "year": 2013,
+      "stance": "supporting"
+    }
+  ],
+  "adapterMeta": {
+    "adapterVersion": "consensus/2026-05-05",
+    "extractionWarnings": [],
+    "selectorHits": {"consensus-statement": 1, "paper-card": 3}
+  }
+}

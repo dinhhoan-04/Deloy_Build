@@ -1,0 +1,22 @@
+project_name = "research-kit"
+domain_name  = "example.com"
+create_elasticache = false
+external_redis_url = "rediss://:<password>@<host>:6379/0"
+ecs_task_cpu       = 512
+ecs_task_memory    = 1024
+ecs_desired_count  = 1
+
+# Prefer exporting these as TF_VAR_* environment variables instead of storing real
+# credentials in a tfvars file that could be committed by mistake.
+google_client_id     = "your-google-client-id.apps.googleusercontent.com"
+gemini_api_key       = ""
+openai_api_key       = ""
+google_api_key       = ""
+zai_api_key          = ""
+session_secret       = ""
+rk_mcp_token         = ""
+llm_primary_provider = "zai"
+llm_gemini_model     = "gemini-2.5-flash"
+llm_zai_model        = "glm-4.7"
+llm_openai_model     = "gpt-4o-mini"
+log_level            = "INFO"

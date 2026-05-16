@@ -1,0 +1,123 @@
+/* tokens.css — all colours, radii, shadows from design handoff */
+:root {
+  /* Neutral */
+  --rk-bg: #f3f6fb;
+  --rk-surface: #ffffff;
+  --rk-surface-2: #edf3ff;
+  --rk-border: #d4dfef;
+  --rk-text: #182033;
+  --rk-text-2: #42516e;
+  --rk-text-3: #6f7f9d;
+
+  /* Brand */
+  --rk-blue: #1366d6;
+  --rk-blue-hover: #0f56b5;
+  --rk-blue-subtle: rgba(19,102,214,0.12);
+
+  /* Status */
+  --rk-green: #0f8a56;
+  --rk-green-subtle: rgba(15,138,86,0.12);
+  --rk-yellow: #a86500;
+  --rk-yellow-subtle: rgba(168,101,0,0.14);
+  --rk-red: #c43f32;
+  --rk-red-subtle: rgba(196,63,50,0.12);
+  --rk-grey: #5e6f8f;
+  --rk-grey-subtle: rgba(94,111,143,0.12);
+
+  /* Radius */
+  --rk-r-sm: 8px;
+  --rk-r-md: 12px;
+  --rk-r-lg: 16px;
+  --rk-r-pill: 999px;
+
+  /* Warm & Modern brand extensions */
+  --rk-brand: #7c3aed;
+  --rk-brand-hover: #6d28d9;
+  --rk-brand-gradient: linear-gradient(135deg, #7c3aed, #2563eb);
+  --rk-brand-subtle: rgba(124, 58, 237, 0.10);
+  --rk-surface-warm: #faf5ff;
+  --rk-border-warm: #e9d5ff;
+  --rk-text-brand: #3b0764;
+
+  /* Shadows */
+  --rk-shadow-sm: 0 2px 8px rgba(124, 58, 237, 0.06);
+  --rk-shadow-md: 0 4px 16px rgba(124, 58, 237, 0.12);
+  --rk-shadow-modal: 0 8px 32px rgba(124, 58, 237, 0.18);
+
+  /* Sidebar dimensions */
+  --rk-panel-w: 360px;
+  --rk-header-h: 56px;
+  --rk-progress-h: 38px;
+  --rk-tabbar-h: 52px;
+  --rk-footer-h: 56px;
+}
+
+/* Animations */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.6; }
+}
+
+@keyframes badgePop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes conflictPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224,96,96,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(224,96,96,0); }
+}
+
+/* Utility classes for animations */
+.animate-fadeSlideIn   { animation: fadeSlideIn  0.18s ease-out; }
+.animate-slideInRight  { animation: slideInRight  0.22s ease-out; }
+.animate-slideInDown   { animation: slideInDown   0.18s ease-out; }
+.animate-pulseDot      { animation: pulseDot      1.4s ease-in-out infinite; }
+.animate-badgePop      { animation: badgePop      0.25s ease-out; }
+.animate-toastIn       { animation: toastIn       0.2s ease-out; }
+.animate-spinRing      { animation: spinRing      0.8s linear infinite; }
+.animate-conflictPulse { animation: conflictPulse 2s ease-in-out infinite; }
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastSlide {
+  from { opacity: 0; transform: translateY(-10px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.animate-shimmer    { animation: shimmer    1.4s ease-in-out infinite; }
+.animate-staggerIn  { animation: staggerIn  0.22s ease-out both; }
+.animate-toastSlide { animation: toastSlide 0.22s ease-out both; }

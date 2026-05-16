@@ -1,0 +1,49 @@
+{
+  "site": "scispace",
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-05-05T00:00:00Z",
+  "url": "https://scispace.com/search?q=CRISPR",
+  "title": "SciSpace – CRISPR",
+  "query": "What is the current state of CRISPR gene editing?",
+  "answer": {
+    "id": "b3c4d5e6",
+    "text": "CRISPR-Cas9 has shown remarkable precision in targeting specific genomic sequences. Off-target effects remain a significant concern.",
+    "paragraphs": [
+      {
+        "id": "p0",
+        "text": "CRISPR-Cas9 has shown remarkable precision in targeting specific genomic sequences.",
+        "citationIds": ["r1"]
+      },
+      {
+        "id": "p1",
+        "text": "Off-target effects remain a significant concern.",
+        "citationIds": ["r1"]
+      }
+    ]
+  },
+  "citations": [
+    {
+      "id": "r1",
+      "label": "1",
+      "url": "https://doi.org/10.1126/science.1225829",
+      "doi": "10.1126/science.1225829",
+      "title": "A programmable dual-RNA-guided DNA endonuclease in adaptive bacterial immunity",
+      "rawAnchorText": "Doudna & Charpentier, 2012",
+      "year": 2012
+    },
+    {
+      "id": "r2",
+      "label": "2",
+      "url": "https://doi.org/10.1126/science.1231143",
+      "doi": "10.1126/science.1231143",
+      "title": "Multiplex genome engineering using CRISPR/Cas systems",
+      "rawAnchorText": "Cong et al., 2013",
+      "year": 2013
+    }
+  ],
+  "adapterMeta": {
+    "adapterVersion": "scispace/2026-05-05",
+    "extractionWarnings": [],
+    "selectorHits": {"ai-message": 1, "answer-paragraphs": 2, "source-item": 2}
+  }
+}

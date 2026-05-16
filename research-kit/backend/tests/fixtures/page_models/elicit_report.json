@@ -1,0 +1,58 @@
+{
+  "site": "elicit",
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-05-05T00:00:00Z",
+  "url": "https://elicit.com/search?q=sleep+deprivation",
+  "title": "Elicit – sleep deprivation",
+  "query": "What are the effects of sleep deprivation on cognitive performance?",
+  "answer": {
+    "id": "a1b2c3d4",
+    "text": "Sleep deprivation significantly impairs cognitive performance across multiple domains. Working memory and attention are particularly vulnerable.",
+    "paragraphs": [
+      {
+        "id": "p0",
+        "text": "Sleep deprivation significantly impairs cognitive performance across multiple domains.",
+        "citationIds": ["c1"]
+      },
+      {
+        "id": "p1",
+        "text": "Working memory and attention are particularly vulnerable.",
+        "citationIds": ["c2", "c3"]
+      }
+    ]
+  },
+  "citations": [
+    {
+      "id": "c1",
+      "label": "[1]",
+      "url": "https://doi.org/10.1093/sleep/zsaa022",
+      "doi": "10.1093/sleep/zsaa022",
+      "title": "The impact of sleep deprivation on decision making",
+      "rawAnchorText": "Harrison & Horne, 2000",
+      "year": 2000
+    },
+    {
+      "id": "c2",
+      "label": "[2]",
+      "url": "https://doi.org/10.1093/sleep/23.3.309",
+      "doi": "10.1093/sleep/23.3.309",
+      "title": "Altered brain response to verbal learning following sleep deprivation",
+      "rawAnchorText": "Drummond et al., 2000",
+      "year": 2000
+    },
+    {
+      "id": "c3",
+      "label": "[3]",
+      "url": "https://doi.org/10.1016/j.sleep.2007.10.009",
+      "doi": "10.1016/j.sleep.2007.10.009",
+      "title": "Sleep deprivation and vigilant attention",
+      "rawAnchorText": "Lim & Dinges, 2008",
+      "year": 2008
+    }
+  ],
+  "adapterMeta": {
+    "adapterVersion": "elicit/2026-05-05",
+    "extractionWarnings": [],
+    "selectorHits": {"report-mode": 1, "answer-paragraphs": 2, "citation-item-primary": 3}
+  }
+}

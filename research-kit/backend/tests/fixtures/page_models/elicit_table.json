@@ -1,0 +1,53 @@
+{
+  "site": "elicit",
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-05-05T00:00:00Z",
+  "url": "https://elicit.com/search?q=mindfulness+anxiety",
+  "title": "Elicit – mindfulness anxiety",
+  "query": "Effects of mindfulness on anxiety",
+  "tableRows": [
+    {
+      "id": "row-0",
+      "paperCitationId": "c1",
+      "cells": {
+        "sample_size": {"text": "109", "citationIds": ["c1"]},
+        "intervention": {"text": "MBSR 8-week", "citationIds": ["c1"]},
+        "outcome": {"text": "Significant reduction in anxiety (p<0.001)", "citationIds": ["c1"]}
+      }
+    },
+    {
+      "id": "row-1",
+      "paperCitationId": "c2",
+      "cells": {
+        "sample_size": {"text": "216", "citationIds": ["c2"]},
+        "intervention": {"text": "DBT mindfulness", "citationIds": ["c2"]},
+        "outcome": {"text": "Moderate anxiety reduction", "citationIds": ["c2"]}
+      }
+    }
+  ],
+  "citations": [
+    {
+      "id": "c1",
+      "label": "[1]",
+      "url": "https://doi.org/10.1016/j.brat.2013.12.018",
+      "doi": "10.1016/j.brat.2013.12.018",
+      "title": "Mindfulness-based stress reduction for anxiety disorders",
+      "rawAnchorText": "Vøllestad et al., 2012",
+      "year": 2012
+    },
+    {
+      "id": "c2",
+      "label": "[2]",
+      "url": "https://doi.org/10.1016/j.cpr.2010.01.011",
+      "doi": "10.1016/j.cpr.2010.01.011",
+      "title": "Assessment of mindfulness by self-report",
+      "rawAnchorText": "Baer et al., 2012",
+      "year": 2012
+    }
+  ],
+  "adapterMeta": {
+    "adapterVersion": "elicit/2026-05-05",
+    "extractionWarnings": [],
+    "selectorHits": {"table-mode": 1, "table-rows": 2, "citation-item-primary": 2}
+  }
+}

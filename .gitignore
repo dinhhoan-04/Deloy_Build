@@ -1,0 +1,65 @@
+# Environment
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+build/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+node_modules/
+lab-test/
+
+# OS
+.DS_Store
+.vscode/
+
+# Local AI / editor metadata
+.agent/
+.claude/
+.codex/
+.cursor/
+.gemini/
+.superpowers/
+.github/hooks/
+
+# Extension private key
+*.pem
+*.key
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+terraform.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# AI logs — tracked structure, ignored content
+.ai-log/*.jsonl
+
+# Data artifacts — tracked structure (.gitkeep), ignored content
+data/raw/*.pdf
+data/raw/*.docx
+data/raw/*.txt
+data/processed/*.json
+data/processed/*.md
+data/synthesis/*.json
+data/synthesis/*.md
+data/synthesis/*.html
+
+# reports
+reports/
+goclaw-docs/
+# docs/ — now tracked
+
+# research-kit/landing/releases/
+# session
+session_*.md

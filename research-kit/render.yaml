@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: rk-backend
+    runtime: docker
+    dockerfilePath: ./infra/Dockerfile.backend
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rk-postgres
+          property: connectionString
+      - key: REDIS_URL
+        sync: false   # dùng Upstash Redis — điền URL vào Dashboard
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: ZAI_API_KEY
+        sync: false
+      - key: LLM_PRIMARY_PROVIDER
+        value: zai
+      - key: LLM_GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: LLM_ZAI_MODEL
+        value: glm-4.7
+      - key: LLM_OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: RK_MCP_TOKEN
+        generateValue: true
+      - key: ENV
+        value: production
+
+databases:
+  - name: rk-postgres
+    plan: free
+    databaseName: rk
+    user: rk

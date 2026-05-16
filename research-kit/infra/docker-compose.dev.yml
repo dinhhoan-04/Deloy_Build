@@ -1,0 +1,13 @@
+services:
+  backend:
+    command: ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--reload"]
+    volumes:
+      - ../backend:/app/backend
+      - ../shared:/app/shared
+    environment:
+      ENV: development
+      LOG_LEVEL: DEBUG
+  postgres:
+    ports: ["5433:5432"]
+  redis:
+    ports: ["6380:6379"]

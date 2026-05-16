@@ -1,0 +1,1 @@
+var e=`rag:chunks`,t=500;async function n(){return(await chrome.storage.session.get(e))[e]??[]}async function r(r){let a=await n(),o=new Set(a.map(i)),s=r.filter(e=>!o.has(i(e)));if(s.length===0)return;let c=[...a,...s],l=c.length>t?c.slice(c.length-t):c;await chrome.storage.session.set({[e]:l})}function i(e){return`${e.siteUrl}:${e.text.slice(0,50)}`}export{r as n,n as t};
