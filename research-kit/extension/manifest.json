@@ -15,6 +15,7 @@
   "host_permissions": [
     "http://localhost:8000/*",
     "http://localhost:9000/*",
+    "http://*.elb.amazonaws.com/*",
     "https://elicit.com/*",
     "https://scispace.com/*",
     "https://consensus.app/*"
