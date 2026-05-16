@@ -89,6 +89,32 @@ jobs:
             terraform import aws_lb_target_group.api "$TG_ARN" || true
           fi
 
+          # ALB Listeners (must import so TF can manage listener->target group dependency)
+          if [ -n "$ALB_ARN" ] && [ "$ALB_ARN" != "None" ]; then
+            LISTENERS=$(aws elbv2 describe-listeners --load-balancer-arn "$ALB_ARN" --query "Listeners[*].[ListenerArn,Port]" --output text 2>/dev/null) || true
+            if [ -n "$LISTENERS" ]; then
+              echo "$LISTENERS" | while read -r LISTENER_ARN LISTENER_PORT; do
+                if [ "$LISTENER_PORT" = "80" ]; then
+                  terraform import 'aws_lb_listener.http_forward[0]' "$LISTENER_ARN" || true
+                elif [ "$LISTENER_PORT" = "443" ]; then
+                  terraform import 'aws_lb_listener.https[0]' "$LISTENER_ARN" || true
+                fi
+              done
+            fi
+          fi
+
+          # ECS Cluster
+          terraform import aws_ecs_cluster.backend research-kit-backend || true
+
+          # S3 Bucket
+          S3_BUCKET=$(aws s3api list-buckets --query "Buckets[?starts_with(Name,'research-kit-landing-')].Name | [0]" --output text 2>/dev/null) || true
+          if [ -n "$S3_BUCKET" ] && [ "$S3_BUCKET" != "None" ]; then
+            terraform import aws_s3_bucket.landing "$S3_BUCKET" || true
+            terraform import aws_s3_bucket_public_access_block.landing "$S3_BUCKET" || true
+            terraform import aws_s3_bucket_website_configuration.landing "$S3_BUCKET" || true
+            terraform import aws_s3_bucket_ownership_controls.landing "$S3_BUCKET" || true
+          fi
+
           echo "=== Import complete ==="
 
       - name: Terraform apply
