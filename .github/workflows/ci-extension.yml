@@ -19,7 +19,7 @@ permissions:
 jobs:
   typecheck:
     name: Type Check (tsc)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS_JSON != '' && vars.RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
     defaults:
       run:
         working-directory: research-kit/extension
@@ -41,7 +41,7 @@ jobs:
 
   lint:
     name: Lint (eslint)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS_JSON != '' && vars.RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
     defaults:
       run:
         working-directory: research-kit/extension
@@ -63,7 +63,7 @@ jobs:
 
   test:
     name: Test (vitest)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS_JSON != '' && vars.RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
     defaults:
       run:
         working-directory: research-kit/extension

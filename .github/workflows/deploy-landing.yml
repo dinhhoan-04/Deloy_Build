@@ -19,7 +19,7 @@ env:
 
 jobs:
   deploy-landing:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_LABELS_JSON != '' && vars.RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
 
     steps:
       - name: Checkout
