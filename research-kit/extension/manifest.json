@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Research Kit — Agent Assistant",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyxhVRdK0VaJqqquDb3zW2z4M0Qrt4Jv678ZT+ncHyO3k+lTx9XCcnO4fh+Fwof6uyHuuJj5kZJXPoQPysa/rQUxFfjzMiiRedYbgptERjCeXh8nvsYtNTF2A+9LiOWRVVkBNl/bT9xVVHpzd4j1wsQdF9+UctX4JRnNeYKwKOXzaGmXvEjevoEUofwh88S+Dfg3VgRhbX0TBCO0rOHLJh2ohygVSTZM3/Ci8DcIm2WwwJcm0z9ac4M4QXPR/Yaa7iNyMx1mF47V4IZOGQ/M1X/93tF1tDGbfN21x1dmq55ZYxcX5VJs5bs/fHY6vqPMUlY2uhP31n+7TlFjBrv9PlQIDAQAB",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "description": "AI-powered verification and synthesis on academic research platforms",
   "permissions": [
     "activeTab",
