@@ -13,6 +13,13 @@ vi.mock('../../state/useStore', () => ({
     currentProjectId: 'p1',
     inbox: { data: [] },
     claims: { data: [] },
+    provider: 'openai',
+    draft: { data: null, saving: false, dirty: false },
+    loadDraft: vi.fn(),
+    saveDraft: vi.fn(),
+    updateDraftField: vi.fn(),
+    deleteDraft: vi.fn(),
+    showToast: vi.fn(),
   }),
 }))
 

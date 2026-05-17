@@ -27,10 +27,10 @@ describe('ProgressBar', () => {
 
   it('calls onTogglePause when pause clicked', () => {
     const fn = vi.fn()
-    // FIX: Removed unused 'buttons' variable declaration
     render(<ProgressBar progress={prog({ perSite: { elicit: { total: 3, completed: 1, running: 1 }, scispace: { total: 0, completed: 0, running: 0 }, consensus: { total: 0, completed: 0, running: 0 } } })} onTogglePause={fn} />)
-    const pauseBtn = screen.getByText(/⏸/i).closest('button')
-    fireEvent.click(pauseBtn!)
+    // The pause button uses aria-label="pause"
+    const pauseBtn = screen.getByLabelText('pause')
+    fireEvent.click(pauseBtn)
     expect(fn).toHaveBeenCalled()
   })
 

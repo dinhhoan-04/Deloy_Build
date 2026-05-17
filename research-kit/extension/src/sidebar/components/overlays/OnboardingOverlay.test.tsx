@@ -26,12 +26,13 @@ describe('OnboardingOverlay', () => {
     expect(screen.getByText(/extract claims from research papers/i)).toBeInTheDocument()
   })
 
-  it('calls onComplete when finish button clicked on last step', () => {
+  it('calls onComplete when last step button clicked', () => {
     const fn = vi.fn()
     render(<OnboardingOverlay onComplete={fn} />)
     fireEvent.click(screen.getByRole('button', { name: /next/i }))
     fireEvent.click(screen.getByRole('button', { name: /next/i }))
-    fireEvent.click(screen.getByRole('button', { name: /finish/i }))
+    // Last step button says "Get Started →" not "Finish"
+    fireEvent.click(screen.getByRole('button', { name: /get started/i }))
     expect(fn).toHaveBeenCalled()
   })
 

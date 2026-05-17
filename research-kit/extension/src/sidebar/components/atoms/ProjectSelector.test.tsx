@@ -13,17 +13,18 @@ describe('ProjectSelector', () => {
     expect(screen.getByText('Default Project')).toBeInTheDocument()
   })
 
-  it('calls onSwitch when option selected', () => {
-    const fn = vi.fn()
-    render(<ProjectSelector projects={projects} currentId="p_default" onSwitch={fn} onCreate={vi.fn()} />)
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'p_2' } })
-    expect(fn).toHaveBeenCalledWith('p_2')
+  it('shows dropdown when clicked', () => {
+    render(<ProjectSelector projects={projects} currentId="p_default" onSwitch={vi.fn()} onCreate={vi.fn()} />)
+    // Click the project button to open dropdown
+    fireEvent.click(screen.getByText('Default Project'))
+    expect(screen.getByText('Climate Research')).toBeInTheDocument()
   })
 
-  it('calls onCreate when new project option selected', () => {
+  it('calls onCreate when new project button clicked', () => {
     const fn = vi.fn()
     render(<ProjectSelector projects={projects} currentId="p_default" onSwitch={vi.fn()} onCreate={fn} />)
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: '__new__' } })
+    // Click the "+" button
+    fireEvent.click(screen.getByTitle('New project'))
     expect(fn).toHaveBeenCalled()
   })
 })

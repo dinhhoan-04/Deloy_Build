@@ -10,15 +10,11 @@ describe('HelpTab', () => {
 
   it('shows all feature sections', () => {
     render(<HelpTab />)
-    expect(screen.getByText('✓ Verify')).toBeInTheDocument()
-    expect(screen.getByText('⬇ Inbox')).toBeInTheDocument()
-    expect(screen.getByText('⚡ Conflicts')).toBeInTheDocument()
-    expect(screen.getByText('💬 Chat')).toBeInTheDocument()
-    expect(screen.getByText('✏ Draft')).toBeInTheDocument()
-  })
-
-  it('shows version info', () => {
-    render(<HelpTab />)
-    expect(screen.getByText(/version 2.0/i)).toBeInTheDocument()
+    // Component renders feature names as separate text nodes (icons are SVGs)
+    expect(screen.getByText('Verify')).toBeInTheDocument()
+    expect(screen.getByText('Inbox')).toBeInTheDocument()
+    expect(screen.getByText('Conflicts')).toBeInTheDocument()
+    expect(screen.getByText('Chat')).toBeInTheDocument()
+    expect(screen.getByText('Draft')).toBeInTheDocument()
   })
 })

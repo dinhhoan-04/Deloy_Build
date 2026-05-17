@@ -155,7 +155,7 @@ describe('App', () => {
 
   it('renders verify tab by default', () => {
     render(<App />)
-    expect(screen.getByText(/no claims detected/i)).toBeInTheDocument()
+    expect(screen.getByText(/no claims yet/i)).toBeInTheDocument()
   })
 
   it('switches to inbox tab when clicked', () => {

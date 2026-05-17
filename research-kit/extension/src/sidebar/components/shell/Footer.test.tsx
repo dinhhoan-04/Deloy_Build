@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { Footer } from './Footer'
 
 describe('Footer', () => {
-  it('renders project selector', () => {
+  it('renders project name', () => {
     render(<Footer
       projects={[{ id: 'p_default', name: 'Default Project' }]}
       currentProjectId="p_default"
@@ -13,7 +13,7 @@ describe('Footer', () => {
       inboxSelectedCount={0}
       onClearSelection={vi.fn()}
     />)
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    expect(screen.getByText('Default Project')).toBeInTheDocument()
   })
 
   it('shows selection count when items selected', () => {
