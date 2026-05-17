@@ -1,0 +1,83 @@
+name: CI — Extension
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research-kit/extension/**"
+      - ".github/workflows/ci-extension.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "research-kit/extension/**"
+      - ".github/workflows/ci-extension.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    name: Type Check (tsc)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-kit/extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: research-kit/extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc -b --noEmit
+
+  lint:
+    name: Lint (eslint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-kit/extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: research-kit/extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+  test:
+    name: Test (vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-kit/extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: research-kit/extension/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run vitest
+        run: npm test

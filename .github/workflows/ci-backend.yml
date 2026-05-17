@@ -1,0 +1,64 @@
+name: CI — Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research-kit/backend/**"
+      - "research-kit/shared/**"
+      - ".github/workflows/ci-backend.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "research-kit/backend/**"
+      - "research-kit/shared/**"
+      - ".github/workflows/ci-backend.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-kit/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff>=0.5
+
+      - name: Ruff check (lint)
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+  test:
+    name: Test (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-kit/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+          pip install -e ../shared
+
+      - name: Run pytest
+        run: pytest --tb=short -q
