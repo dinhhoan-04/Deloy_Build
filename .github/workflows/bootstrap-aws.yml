@@ -15,7 +15,8 @@ permissions:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-1' }}
   TF_IN_AUTOMATION: "true"
-  TF_STATE_BUCKET: research-kit-tfstate-087195661500
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET || 'research-kit-tfstate-087195661500' }}
+  TF_STATE_KEY: ${{ vars.TF_STATE_KEY || format('aws/{0}/terraform.tfstate', vars.PROJECT_NAME || 'research-kit') }}
 
 jobs:
   bootstrap:
@@ -91,6 +92,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="bucket=$TF_STATE_BUCKET" \
+            -backend-config="key=$TF_STATE_KEY" \
             -backend-config="region=$AWS_REGION"
 
       - name: Terraform apply
