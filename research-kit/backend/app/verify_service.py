@@ -6,7 +6,7 @@ from typing import Optional
 import httpx
 import anthropic
 
-from app.openalex import lookup_paper, PaperInfo
+from app.openalex import lookup_paper
 
 _claude = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 

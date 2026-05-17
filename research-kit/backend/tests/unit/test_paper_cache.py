@@ -1,7 +1,5 @@
 import pytest
 import pytest_asyncio
-import aiosqlite
-import tempfile
 import os
 
 @pytest_asyncio.fixture

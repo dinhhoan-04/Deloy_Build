@@ -1,10 +1,9 @@
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from app.main import app
 from app.schemas import (
     LinkResult, LinkComponents, SentenceResult, SentenceComponents,
-    LLMAssessment, ParagraphResult
+    LLMAssessment
 )
 
 client = TestClient(app)

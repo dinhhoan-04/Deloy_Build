@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from app.schemas import ExtractedFacts, SentenceResult
+from app.schemas import ExtractedFacts
 from app.services.tier2.verifier import (
     verify_sentence,
     _verbatim_score,

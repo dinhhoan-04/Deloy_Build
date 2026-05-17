@@ -51,3 +51,11 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint]
+ignore = [
+  "E701",   # multiple statements on one line (colon) — pre-existing style
+  "E702",   # multiple statements on one line (semicolon) — pre-existing style
+  "E722",   # bare except — one legacy occurrence
+  "E402",   # module-level import not at top — test files with env setup
+]

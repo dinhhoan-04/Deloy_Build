@@ -14,7 +14,6 @@ async def test_chat_injects_context_into_system_prompt():
 
     from app.routers.runs import _execute_inline_run
     from rk_shared.types import RunKind
-    import json
 
     run_id = uuid4()
     run = MagicMock()

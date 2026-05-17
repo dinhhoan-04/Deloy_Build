@@ -7,7 +7,7 @@ import os
 import json
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict, Literal, Optional, AsyncGenerator
+from typing import Any, Dict, Literal, Optional
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware

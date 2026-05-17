@@ -1,5 +1,4 @@
 from __future__ import annotations
-import asyncio
 import json
 from uuid import UUID
 from typing import AsyncIterator

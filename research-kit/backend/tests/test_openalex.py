@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.openalex import lookup_paper, PaperInfo
+from app.openalex import lookup_paper
 
 @pytest.mark.asyncio
 async def test_lookup_by_doi_returns_paper_info():

@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from app.schemas import LinkResult
 from app.services.tier1.link_validator import validate_link
 
 ARXIV_URL = "https://arxiv.org/abs/1810.04805"

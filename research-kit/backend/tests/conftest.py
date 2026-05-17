@@ -109,7 +109,6 @@ async def client_dev_bob(pg_url):
 @pytest.fixture
 async def async_session(pg_url):
     import app.db as _db
-    from sqlalchemy.ext.asyncio import AsyncSession
     _db.init_engine(pg_url)
     sm = _db.sessionmaker()
     async with sm() as s:

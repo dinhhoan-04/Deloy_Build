@@ -12,7 +12,7 @@ export default [
       globals: globals.browser,
     },
     plugins: {
-      react,
+      'react-hooks': react,
       '@typescript-eslint': tseslint.plugin,
     },
     rules: {

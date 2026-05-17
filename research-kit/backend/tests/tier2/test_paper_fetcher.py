@@ -23,7 +23,7 @@ async def test_arxiv_url_fetches_html():
 async def test_returns_cached_paper_without_fetching():
     cached_data = {"text": "cached paper text", "accessibility": "open_access"}
 
-    with patch("app.db.cache.get", new_callable=AsyncMock, return_value=cached_data) as mock_get:
+    with patch("app.db.cache.get", new_callable=AsyncMock, return_value=cached_data):
         text, accessibility = await fetch_paper("https://arxiv.org/abs/1810.04805")
 
     assert text == "cached paper text"

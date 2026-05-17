@@ -1,5 +1,5 @@
 import pytest
-from app.db.postgres import get_engine, session_scope
+from app.db.postgres import session_scope
 
 
 @pytest.mark.asyncio

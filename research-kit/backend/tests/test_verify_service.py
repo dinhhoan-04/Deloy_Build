@@ -1,7 +1,6 @@
 import pytest
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
-from app.verify_service import verify_claim, VerifyResult, VerifyStatus
+from unittest.mock import AsyncMock, patch
+from app.verify_service import verify_claim, VerifyStatus
 from app.openalex import PaperInfo
 
 FAKE_PAPER = PaperInfo(

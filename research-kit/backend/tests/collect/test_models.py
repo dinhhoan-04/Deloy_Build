@@ -1,4 +1,4 @@
-from app.db.models import Base, AggregateSession, AggregateClaim, AggregateReference, GoogleToken
+from app.db.models import Base, AggregateClaim
 
 
 def test_models_register_on_metadata():

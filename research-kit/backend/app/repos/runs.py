@@ -2,7 +2,7 @@ from __future__ import annotations
 import hashlib
 import json
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

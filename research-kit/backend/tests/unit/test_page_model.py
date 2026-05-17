@@ -1,5 +1,4 @@
 import json
-import pytest
 from pathlib import Path
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "page_models"
