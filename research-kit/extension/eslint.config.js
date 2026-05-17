@@ -24,8 +24,10 @@ export default tseslint.config(
     },
     rules: {
       'react-hooks/exhaustive-deps': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'off',
+      'no-unused-expressions': 'off',
+      'no-empty': 'off',
     },
   },
 )
