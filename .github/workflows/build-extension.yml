@@ -16,7 +16,12 @@ env:
   NODE_VERSION: "22"
 
 jobs:
+  ci:
+    name: CI Gate
+    uses: ./.github/workflows/ci-extension.yml
+
   build-extension:
+    needs: ci
     runs-on: ubuntu-latest
 
     steps:
