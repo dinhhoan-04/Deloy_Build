@@ -9,7 +9,7 @@ async def test_chat_injects_context_into_system_prompt():
     captured_system = {}
 
     async def fake_extract(system, user, schema):
-        captured_system['value'] = system
+        captured_system["value"] = system
         return {"text": "answer"}
 
     from app.routers.runs import _execute_inline_run
@@ -36,8 +36,11 @@ async def test_chat_injects_context_into_system_prompt():
     mock_provider = MagicMock()
     mock_provider.extract = AsyncMock(side_effect=fake_extract)
 
-    with patch('app.routers.runs._provider_chain', return_value=mock_provider):
+    with patch("app.routers.runs._provider_chain", return_value=mock_provider):
         await _execute_inline_run(lambda: mock_session, run_id)
 
-    assert 'relevant content' in captured_system['value'].lower() or 'context' in captured_system['value'].lower()
-    assert 'some page text' in captured_system['value']
+    assert (
+        "relevant content" in captured_system["value"].lower()
+        or "context" in captured_system["value"].lower()
+    )
+    assert "some page text" in captured_system["value"]

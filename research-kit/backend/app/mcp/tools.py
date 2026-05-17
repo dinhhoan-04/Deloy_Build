@@ -1,4 +1,5 @@
 """MCP tool implementations for the RK inbox."""
+
 from __future__ import annotations
 import httpx
 from uuid import UUID

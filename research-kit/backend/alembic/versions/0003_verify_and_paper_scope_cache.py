@@ -4,6 +4,7 @@ Revision ID: 0003_scope_cache
 Revises: 0002_paper_content
 Create Date: 2026-05-13
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql

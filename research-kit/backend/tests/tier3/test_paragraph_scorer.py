@@ -2,7 +2,9 @@ from app.schemas import SentenceResult, LinkResult, LinkComponents
 from app.services.tier3.paragraph_scorer import score_paragraph, score_document
 
 
-def _make_sentence(score: float | None, status: str = "verified", has_citation: bool = True) -> SentenceResult:
+def _make_sentence(
+    score: float | None, status: str = "verified", has_citation: bool = True
+) -> SentenceResult:
     return SentenceResult(
         text="A sentence.",
         score=score,
@@ -13,7 +15,9 @@ def _make_sentence(score: float | None, status: str = "verified", has_citation: 
 
 def _make_link(score: int = 100) -> LinkResult:
     return LinkResult(
-        ref_id="1", url="https://arxiv.org/abs/123", score=score,
+        ref_id="1",
+        url="https://arxiv.org/abs/123",
+        score=score,
         components=LinkComponents(http_ok=True, resolvable=True, trusted_domain=True),
         status="ok",
     )
@@ -51,6 +55,7 @@ def test_paragraph_mixed_status_excludes_unverified():
 
 def test_document_score_averages_paragraphs():
     from app.schemas import ParagraphResult
+
     p1 = ParagraphResult(paragraph_score=80, citation_density=100, sentences=[], links=[])
     p2 = ParagraphResult(paragraph_score=60, citation_density=100, sentences=[], links=[])
     doc_score = score_document([p1, p2])
@@ -59,6 +64,7 @@ def test_document_score_averages_paragraphs():
 
 def test_document_score_ignores_none_paragraphs():
     from app.schemas import ParagraphResult
+
     p1 = ParagraphResult(paragraph_score=80, citation_density=100, sentences=[], links=[])
     p2 = ParagraphResult(paragraph_score=None, citation_density=0, sentences=[], links=[])
     doc_score = score_document([p1, p2])

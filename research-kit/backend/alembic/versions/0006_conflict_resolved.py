@@ -4,6 +4,7 @@ Revision ID: 0006_conflict_resolved
 Revises: 0005_drafts
 Create Date: 2026-05-15
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -15,10 +16,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("conflicts",
-        sa.Column("resolved_at", sa.TIMESTAMP(timezone=True), nullable=True))
-    op.add_column("conflicts",
-        sa.Column("accepted_claim_id", postgresql.UUID(as_uuid=True), nullable=True))
+    op.add_column("conflicts", sa.Column("resolved_at", sa.TIMESTAMP(timezone=True), nullable=True))
+    op.add_column(
+        "conflicts", sa.Column("accepted_claim_id", postgresql.UUID(as_uuid=True), nullable=True)
+    )
 
 
 def downgrade() -> None:

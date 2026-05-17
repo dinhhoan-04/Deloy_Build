@@ -9,26 +9,33 @@ from rk_shared.models import InboxItem, Claim, Project
 
 
 class InboxRepo:
-    def __init__(self, s: AsyncSession): self.s = s
+    def __init__(self, s: AsyncSession):
+        self.s = s
 
     async def _ensure_owns(self, user_id: UUID, project_id: UUID, claim_id: UUID) -> None:
-        proj = (await self.s.execute(
-            select(Project.id).where(Project.id == project_id, Project.user_id == user_id)
-        )).scalar_one_or_none()
+        proj = (
+            await self.s.execute(
+                select(Project.id).where(Project.id == project_id, Project.user_id == user_id)
+            )
+        ).scalar_one_or_none()
         if not proj:
             raise NotFoundError("project not found")
-        clm = (await self.s.execute(
-            select(Claim.id).where(Claim.id == claim_id,
-                                   Claim.user_id == user_id,
-                                   Claim.project_id == project_id)
-        )).scalar_one_or_none()
+        clm = (
+            await self.s.execute(
+                select(Claim.id).where(
+                    Claim.id == claim_id, Claim.user_id == user_id, Claim.project_id == project_id
+                )
+            )
+        ).scalar_one_or_none()
         if not clm:
             raise NotFoundError("claim not found")
 
     async def _get_item(self, user_id: UUID, inbox_id: UUID) -> InboxItem:
-        item = (await self.s.execute(
-            select(InboxItem).where(InboxItem.id == inbox_id, InboxItem.user_id == user_id)
-        )).scalar_one_or_none()
+        item = (
+            await self.s.execute(
+                select(InboxItem).where(InboxItem.id == inbox_id, InboxItem.user_id == user_id)
+            )
+        ).scalar_one_or_none()
         if not item:
             raise NotFoundError("inbox item not found")
         return item
@@ -45,19 +52,27 @@ class InboxRepo:
         return item
 
     async def list_for(self, user_id: UUID, *, project_id: UUID) -> list[InboxItem]:
-        return list((await self.s.execute(
-            select(InboxItem)
-            .where(InboxItem.user_id == user_id, InboxItem.project_id == project_id)
-            .order_by(InboxItem.saved_at.desc())
-        )).scalars())
+        return list(
+            (
+                await self.s.execute(
+                    select(InboxItem)
+                    .where(InboxItem.user_id == user_id, InboxItem.project_id == project_id)
+                    .order_by(InboxItem.saved_at.desc())
+                )
+            ).scalars()
+        )
 
-    async def patch(self, user_id: UUID, inbox_id: UUID, *, archived_at: datetime | None) -> InboxItem:
+    async def patch(
+        self, user_id: UUID, inbox_id: UUID, *, archived_at: datetime | None
+    ) -> InboxItem:
         item = await self._get_item(user_id, inbox_id)
         item.archived_at = archived_at
         await self.s.flush()
         return item
 
-    async def bulk_patch(self, user_id: UUID, ids: list[UUID], *, archived_at: datetime | None) -> list[InboxItem]:
+    async def bulk_patch(
+        self, user_id: UUID, ids: list[UUID], *, archived_at: datetime | None
+    ) -> list[InboxItem]:
         if not ids:
             return []
         await self.s.execute(

@@ -14,8 +14,12 @@ async def test_upsert_creates_draft(db_session: AsyncSession):
     # otherwise skip if no conftest support — the router integration test covers this path.
     repo = DraftRepo(db_session)
     draft = await repo.upsert(
-        user_id=user_id, project_id=project_id,
-        markdown="# Hello", title="T", sections=[], run_id=None,
+        user_id=user_id,
+        project_id=project_id,
+        markdown="# Hello",
+        title="T",
+        sections=[],
+        run_id=None,
     )
     assert draft.markdown == "# Hello"
     assert draft.title == "T"

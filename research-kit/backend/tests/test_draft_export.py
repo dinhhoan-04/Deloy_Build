@@ -6,11 +6,14 @@ async def test_md_export_has_yaml_frontmatter(client_dev_alice):
     r = await client_dev_alice.post("/v1/projects", json={"name": "P"})
     pid = r.json()["id"]
 
-    r = await client_dev_alice.post("/v1/drafts", json={
-        "project_id": pid,
-        "title": "My Draft",
-        "markdown": "# Hello\n\nWorld",
-    })
+    r = await client_dev_alice.post(
+        "/v1/drafts",
+        json={
+            "project_id": pid,
+            "title": "My Draft",
+            "markdown": "# Hello\n\nWorld",
+        },
+    )
     did = r.json()["id"]
 
     r = await client_dev_alice.get(f"/v1/drafts/{did}/export", params={"format": "md"})
@@ -29,11 +32,14 @@ async def test_docx_export_has_date(client_dev_alice):
     r = await client_dev_alice.post("/v1/projects", json={"name": "P"})
     pid = r.json()["id"]
 
-    r = await client_dev_alice.post("/v1/drafts", json={
-        "project_id": pid,
-        "title": "Doc Draft",
-        "markdown": "Some body",
-    })
+    r = await client_dev_alice.post(
+        "/v1/drafts",
+        json={
+            "project_id": pid,
+            "title": "Doc Draft",
+            "markdown": "Some body",
+        },
+    )
     did = r.json()["id"]
 
     r = await client_dev_alice.get(f"/v1/drafts/{did}/export", params={"format": "docx"})

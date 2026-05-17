@@ -4,7 +4,9 @@ from app.services.collect.aggregator import merge_claims, dedupe_references, nor
 
 def _cap(tool, claim_text, refs):
     return ToolCapture(
-        tool_name=tool, captured_at="2026-04-30T10:00:00Z", raw_text="",
+        tool_name=tool,
+        captured_at="2026-04-30T10:00:00Z",
+        raw_text="",
         claims=[RawClaim(text=claim_text, citations=[CollectCitation(**r) for r in refs])],
     )
 

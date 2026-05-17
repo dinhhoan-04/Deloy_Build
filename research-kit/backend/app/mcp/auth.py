@@ -11,6 +11,6 @@ async def verify_bearer(request: Request) -> None:
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="missing bearer token")
-    token = auth[len("Bearer "):]
+    token = auth[len("Bearer ") :]
     if not hmac.compare_digest(token, _TOKEN):
         raise HTTPException(status_code=401, detail="invalid token")

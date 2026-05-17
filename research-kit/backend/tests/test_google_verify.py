@@ -10,11 +10,16 @@ async def test_verify_accepts_valid_token():
     token = issue_id_token(sub="g-123", email="a@b.com", aud="cid-1", kid=kid, key=key)
 
     from app.auth.google import GoogleVerifier, JWKSCache
+
     cache = JWKSCache(client_id="cid-1")
-    pub_pem = key.public_key().public_bytes(
-        serialization.Encoding.PEM,
-        serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode()
+    pub_pem = (
+        key.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode()
+    )
     cache._set_for_test({kid: pub_pem})
 
     verifier = GoogleVerifier(cache, client_id="cid-1")
@@ -27,6 +32,7 @@ async def test_verify_accepts_valid_token():
 async def test_verify_rejects_wrong_aud():
     from app.auth.google import GoogleVerifier, JWKSCache
     from app.errors import AuthError
+
     key, _ = make_keypair()
     token = issue_id_token(sub="x", email="x@x", aud="OTHER", kid="k", key=key)
     cache = JWKSCache(client_id="cid-1")

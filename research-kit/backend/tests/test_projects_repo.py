@@ -5,6 +5,7 @@ from rk_shared.models import User
 @pytest.mark.asyncio
 async def test_create_list_filters_by_user(db_engine):
     from app.repos.projects import ProjectRepo
+
     async with db_engine() as s:
         u1 = User(google_sub="proj_a", email="a@proj")
         u2 = User(google_sub="proj_b", email="b@proj")

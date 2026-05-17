@@ -18,10 +18,12 @@ async def test_fetch_paper_by_doi_crossref_hit(tmp_path):
         }
     }
     mock_resp = _make_mock_response(200, crossref_data)
-    with patch("app.tools.fetch_paper.init_paper_cache_db", AsyncMock()), \
-         patch("app.tools.fetch_paper.get_cached_paper", AsyncMock(return_value=None)), \
-         patch("app.tools.fetch_paper.set_cached_paper", AsyncMock()), \
-         patch("httpx.AsyncClient") as mock_client_cls:
+    with (
+        patch("app.tools.fetch_paper.init_paper_cache_db", AsyncMock()),
+        patch("app.tools.fetch_paper.get_cached_paper", AsyncMock(return_value=None)),
+        patch("app.tools.fetch_paper.set_cached_paper", AsyncMock()),
+        patch("httpx.AsyncClient") as mock_client_cls,
+    ):
         instance = AsyncMock()
         instance.__aenter__ = AsyncMock(return_value=instance)
         instance.__aexit__ = AsyncMock(return_value=False)
@@ -29,6 +31,7 @@ async def test_fetch_paper_by_doi_crossref_hit(tmp_path):
         mock_client_cls.return_value = instance
 
         from app.tools.fetch_paper import fetch_paper
+
         result = await fetch_paper(doi="10.1000/test", _db_path=str(tmp_path / "c.db"))
 
     assert "error" not in result
@@ -38,11 +41,21 @@ async def test_fetch_paper_by_doi_crossref_hit(tmp_path):
 
 @pytest.mark.asyncio
 async def test_fetch_paper_cache_hit(tmp_path):
-    cached = {"title": "Cached Title", "abstract": "Cached abstract", "source": "crossref", "full_text": None}
-    with patch("app.tools.fetch_paper.init_paper_cache_db", AsyncMock()), \
-         patch("app.tools.fetch_paper.get_cached_paper", AsyncMock(return_value=cached)):
+    cached = {
+        "title": "Cached Title",
+        "abstract": "Cached abstract",
+        "source": "crossref",
+        "full_text": None,
+    }
+    with (
+        patch("app.tools.fetch_paper.init_paper_cache_db", AsyncMock()),
+        patch("app.tools.fetch_paper.get_cached_paper", AsyncMock(return_value=cached)),
+    ):
         from app.tools.fetch_paper import fetch_paper
-        result = await fetch_paper(url="https://doi.org/10.1000/cached", _db_path=str(tmp_path / "c.db"))
+
+        result = await fetch_paper(
+            url="https://doi.org/10.1000/cached", _db_path=str(tmp_path / "c.db")
+        )
 
     assert result["title"] == "Cached Title"
 
@@ -50,5 +63,6 @@ async def test_fetch_paper_cache_hit(tmp_path):
 @pytest.mark.asyncio
 async def test_fetch_paper_no_url_no_doi(tmp_path):
     from app.tools.fetch_paper import fetch_paper
+
     result = await fetch_paper(_db_path=str(tmp_path / "c.db"))
     assert "error" in result

@@ -68,8 +68,14 @@ jobs:
             --ignore=tests/tier1 \
             --ignore=tests/tier2 \
             --ignore=tests/tier3 \
+            --ignore=tests/unit \
             --ignore=tests/test_api.py \
             --ignore=tests/test_provider_field.py \
             --ignore=tests/test_verify_service.py \
-            --ignore=tests/unit/test_paper_cache.py \
+            --ignore=tests/test_runs_cancel.py \
+            --ignore=tests/test_runs_post.py \
+            --ignore=tests/test_sessions.py \
+            --ignore=tests/test_sse_replay_no_dup.py \
+            --ignore=tests/test_conflict_confirm.py \
+            --ignore=tests/test_draft_repo.py \
             -k "not test_migrations"

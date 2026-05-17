@@ -11,7 +11,13 @@ from app.deps import current_user, db
 from app.config import get_settings
 from app.db import sessionmaker as get_sessionmaker
 from app.events.replay import replay_then_tail
-from app.llm.providers import GeminiProvider, ZaiProvider, OpenAIProvider, ProviderError, RateLimitError
+from app.llm.providers import (
+    GeminiProvider,
+    ZaiProvider,
+    OpenAIProvider,
+    ProviderError,
+    RateLimitError,
+)
 from app.redis_pool import get_redis
 from app.repos.runs import RunRepo
 from app.schemas.runs import RunCreate, RunCreateResponse, RunOut
@@ -24,9 +30,16 @@ _inline_tasks: set[asyncio.Task] = set()
 
 def _out(r) -> RunOut:
     return RunOut(
-        id=r.id, kind=r.kind, status=r.status, project_id=r.project_id,
-        input=r.input, result=r.result, error=r.error,
-        created_at=r.created_at, started_at=r.started_at, finished_at=r.finished_at,
+        id=r.id,
+        kind=r.kind,
+        status=r.status,
+        project_id=r.project_id,
+        input=r.input,
+        result=r.result,
+        error=r.error,
+        created_at=r.created_at,
+        started_at=r.started_at,
+        finished_at=r.finished_at,
     )
 
 
@@ -54,7 +67,9 @@ def _spawn_inline_execute(run_id: UUID) -> None:
             await _publish_event(
                 sm, rds, run_id, {"type": "final", "payload": {"content": final_text, "usage": {}}}
             )
-            await _publish_event(sm, rds, run_id, {"type": "status", "payload": {"status": "succeeded"}})
+            await _publish_event(
+                sm, rds, run_id, {"type": "status", "payload": {"status": "succeeded"}}
+            )
         except Exception as e:
             err = {"code": "internal", "message": str(e)[:500], "recoverable": False}
             async with sm() as s:
@@ -64,7 +79,9 @@ def _spawn_inline_execute(run_id: UUID) -> None:
                 run.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 await s.commit()
             await _publish_event(sm, rds, run_id, {"type": "error", "payload": err})
-            await _publish_event(sm, rds, run_id, {"type": "status", "payload": {"status": "failed"}})
+            await _publish_event(
+                sm, rds, run_id, {"type": "status", "payload": {"status": "failed"}}
+            )
 
     task = asyncio.create_task(_job())
     _inline_tasks.add(task)
@@ -78,20 +95,25 @@ async def _publish_event(sm, redis, run_id: UUID, event: dict) -> int:
                 text("SELECT pg_advisory_xact_lock(hashtext(:rid))"),
                 {"rid": str(run_id)},
             )
-            cur_max = (await s.execute(
-                select(func.coalesce(func.max(RunEventRow.seq), 0))
-                .where(RunEventRow.run_id == run_id)
-            )).scalar_one()
+            cur_max = (
+                await s.execute(
+                    select(func.coalesce(func.max(RunEventRow.seq), 0)).where(
+                        RunEventRow.run_id == run_id
+                    )
+                )
+            ).scalar_one()
             seq = int(cur_max) + 1
             s.add(RunEventRow(run_id=run_id, seq=seq, type=event["type"], payload=event["payload"]))
     await redis.publish(
         f"run:{run_id}",
-        json.dumps({
-            "seq": seq,
-            "type": event["type"],
-            "payload": event["payload"],
-            "ts": datetime.now(tz=timezone.utc).isoformat(),
-        }),
+        json.dumps(
+            {
+                "seq": seq,
+                "type": event["type"],
+                "payload": event["payload"],
+                "ts": datetime.now(tz=timezone.utc).isoformat(),
+            }
+        ),
     )
     return seq
 
@@ -189,13 +211,15 @@ async def _execute_inline_run(sm, run_id: UUID) -> tuple[dict, str]:
     provider = _provider_chain(provider_name, model_name)
 
     if kind == RunKind.DRAFT:
-        user = json.dumps({
-            "claims": run_input.get("claims", []),
-            "template": run_input.get("template", "research_summary"),
-            "citation_style": run_input.get("citation_style", "apa"),
-            "outline_hint": run_input.get("outline_hint", ""),
-            "meta": run_input.get("meta", {}),
-        })
+        user = json.dumps(
+            {
+                "claims": run_input.get("claims", []),
+                "template": run_input.get("template", "research_summary"),
+                "citation_style": run_input.get("citation_style", "apa"),
+                "outline_hint": run_input.get("outline_hint", ""),
+                "meta": run_input.get("meta", {}),
+            }
+        )
         try:
             out = await provider.extract(_DRAFT_SYSTEM_PROMPT, user, _draft_schema())
         except (ProviderError, RateLimitError) as e:
@@ -208,7 +232,9 @@ async def _execute_inline_run(sm, run_id: UUID) -> tuple[dict, str]:
         if context:
             system += f"\n\nUse the following extracted content to answer the user's question:\n\n{context}"
         system += '\n\nReturn ONLY JSON: {"text":"..."}.'
-        user = json.dumps({"messages": run_input.get("messages", []), "meta": run_input.get("meta", {})})
+        user = json.dumps(
+            {"messages": run_input.get("messages", []), "meta": run_input.get("meta", {})}
+        )
         schema = {
             "type": "object",
             "additionalProperties": False,
@@ -236,10 +262,12 @@ RULES:
 4. RECOMMENDATION: Pick "side_a", "side_b", or "neither" with a rationale.
 5. OUTPUT: Return valid JSON matching the schema."""
 
-        user = json.dumps({
-            "group_key": run_input.get("group_key"),
-            "sides": run_input.get("sides", []),
-        })
+        user = json.dumps(
+            {
+                "group_key": run_input.get("group_key"),
+                "sides": run_input.get("sides", []),
+            }
+        )
         schema = {
             "type": "object",
             "additionalProperties": False,
@@ -272,6 +300,7 @@ RULES:
         conflict_id = run_input.get("conflict_id")
         if conflict_id:
             from app.repos.conflicts import ConflictRepo
+
             resolution = json.dumps({"kind": "suggestion", **out})
             async with sm() as bg_s:
                 repo = ConflictRepo(bg_s)
@@ -287,9 +316,9 @@ RULES:
 
 
 @router.post("", response_model=RunCreateResponse, status_code=201)
-async def create_run(body: RunCreate,
-                     u: User = Depends(current_user),
-                     s: AsyncSession = Depends(db)):
+async def create_run(
+    body: RunCreate, u: User = Depends(current_user), s: AsyncSession = Depends(db)
+):
     run_input = dict(body.input)
     run_input["meta"] = {
         **(run_input.get("meta") or {}),
@@ -298,29 +327,31 @@ async def create_run(body: RunCreate,
     }
     repo = RunRepo(s)
     run, created = await repo.create_or_get(
-        user_id=u.id, kind=RunKind(body.kind), project_id=body.project_id,
-        input=run_input, idempotency_key=body.idempotency_key,
+        user_id=u.id,
+        kind=RunKind(body.kind),
+        project_id=body.project_id,
+        input=run_input,
+        idempotency_key=body.idempotency_key,
     )
     await s.commit()
     if created:
         _spawn_inline_execute(run.id)
     return RunCreateResponse(
-        run_id=run.id, status=run.status,
+        run_id=run.id,
+        status=run.status,
         stream_url=f"/v1/runs/{run.id}/stream",
     )
 
 
 @router.get("/{run_id}", response_model=RunOut)
-async def get_run(run_id: UUID,
-                  u: User = Depends(current_user),
-                  s: AsyncSession = Depends(db)):
+async def get_run(run_id: UUID, u: User = Depends(current_user), s: AsyncSession = Depends(db)):
     return _out(await RunRepo(s).get(u.id, run_id))
 
 
 @router.post("/{run_id}/cancel", status_code=202)
-async def cancel_run(run_id: UUID,
-                      u: User = Depends(current_user),
-                      s: AsyncSession = Depends(db)) -> Response:
+async def cancel_run(
+    run_id: UUID, u: User = Depends(current_user), s: AsyncSession = Depends(db)
+) -> Response:
     await RunRepo(s).mark_cancelling(u.id, run_id)
     await s.commit()
     rds = await get_redis()
@@ -344,12 +375,16 @@ async def stream_run(
 
     async def gen():
         async for ev in replay_then_tail(
-            run_id=run_id, last_seq=effective,
-            sessionmaker=sm, redis=rds, initial_status=run.status,
+            run_id=run_id,
+            last_seq=effective,
+            sessionmaker=sm,
+            redis=rds,
+            initial_status=run.status,
         ):
             yield {
                 "event": "run_event",
                 "id": str(ev["seq"]),
                 "data": json.dumps(ev, default=str),
             }
+
     return EventSourceResponse(gen())

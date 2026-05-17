@@ -3,10 +3,11 @@
 Principle: never auto-fix orphan references — silently rewriting which paper
 a claim cites would produce wrong verify results. Drop the claim and warn.
 """
+
 from __future__ import annotations
 import re
 
-_DOI_RE = re.compile(r'(10\.\d{4,9}/[^\s]+)', re.IGNORECASE)
+_DOI_RE = re.compile(r"(10\.\d{4,9}/[^\s]+)", re.IGNORECASE)
 
 
 def _clean_doi(raw: str | None) -> str | None:
@@ -22,7 +23,7 @@ def _clean_doi(raw: str | None) -> str | None:
     m = _DOI_RE.search(raw)
     if not m:
         return None
-    return m.group(1).rstrip('.')
+    return m.group(1).rstrip(".")
 
 
 def _norm_title(t: str) -> str:
@@ -97,9 +98,7 @@ def validate_correspondence(raw: dict, *, host_url: str | None = None) -> tuple[
         # Drop the claim if ANY reference is orphan.
         orphans = [pid for pid in remapped if pid not in valid_ids]
         if orphans:
-            warnings.append(
-                f"dropped_orphan_claim: {c['id']} referenced {','.join(orphans)}"
-            )
+            warnings.append(f"dropped_orphan_claim: {c['id']} referenced {','.join(orphans)}")
             continue
         kept.append({**c, "paperIds": remapped})
 

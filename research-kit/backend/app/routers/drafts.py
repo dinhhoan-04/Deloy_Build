@@ -18,9 +18,14 @@ router = APIRouter(prefix="/v1/drafts", tags=["drafts"])
 
 def _out(d) -> DraftOut:
     return DraftOut(
-        id=d.id, project_id=d.project_id, run_id=d.run_id,
-        title=d.title, markdown=d.markdown, sections=d.sections,
-        created_at=d.created_at, updated_at=d.updated_at,
+        id=d.id,
+        project_id=d.project_id,
+        run_id=d.run_id,
+        title=d.title,
+        markdown=d.markdown,
+        sections=d.sections,
+        created_at=d.created_at,
+        updated_at=d.updated_at,
     )
 
 
@@ -50,8 +55,12 @@ async def upsert_draft(
 ):
     repo = DraftRepo(s)
     draft = await repo.upsert(
-        u.id, project_id=body.project_id, run_id=body.run_id,
-        title=body.title, markdown=body.markdown, sections=body.sections,
+        u.id,
+        project_id=body.project_id,
+        run_id=body.run_id,
+        title=body.title,
+        markdown=body.markdown,
+        sections=body.sections,
     )
     await s.commit()
     return _out(draft)
@@ -97,8 +106,8 @@ async def export_draft(
     s: AsyncSession = Depends(db),
 ):
     draft = await DraftRepo(s).get_by_id(u.id, draft_id)
-    safe_title = re.sub(r'[^\w\s-]', '', draft.title).strip().replace(' ', '_') or "draft"
-    date_str = draft.updated_at.strftime('%Y-%m-%d')
+    safe_title = re.sub(r"[^\w\s-]", "", draft.title).strip().replace(" ", "_") or "draft"
+    date_str = draft.updated_at.strftime("%Y-%m-%d")
 
     if format == "docx":
         data = _build_docx(draft.title, draft.markdown, draft.updated_at)

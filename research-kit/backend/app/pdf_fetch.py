@@ -12,6 +12,7 @@ Caller contract:
   - Always await this before calling the LLM.
   - If text is None, do NOT call the LLM — return not_found directly.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -98,8 +99,14 @@ async def _get_once(client: httpx.AsyncClient, url: str) -> tuple[bytes | None, 
         resp = await client.get(url)
         final_url = str(resp.url)
         ctype = (resp.headers.get("content-type") or "").lower()
-        log.info("fetch_response", url=url, final_url=final_url,
-                 status=resp.status_code, content_type=ctype, size=len(resp.content))
+        log.info(
+            "fetch_response",
+            url=url,
+            final_url=final_url,
+            status=resp.status_code,
+            content_type=ctype,
+            size=len(resp.content),
+        )
 
         if resp.status_code >= 400:
             return None, final_url, f"http_{resp.status_code}"
@@ -116,8 +123,13 @@ async def _get_once(client: httpx.AsyncClient, url: str) -> tuple[bytes | None, 
                 await _rate_limit(candidate)
                 nested = await client.get(candidate)
                 nested_ctype = (nested.headers.get("content-type") or "").lower()
-                log.info("fetch_nested", url=candidate, status=nested.status_code,
-                         content_type=nested_ctype, bytes=len(nested.content))
+                log.info(
+                    "fetch_nested",
+                    url=candidate,
+                    status=nested.status_code,
+                    content_type=nested_ctype,
+                    bytes=len(nested.content),
+                )
                 if nested.status_code < 400 and _is_pdf(nested, str(nested.url)):
                     return nested.content, str(nested.url), "ok_via_html"
                 return None, final_url, f"nested_not_pdf:{nested.status_code}"
@@ -145,7 +157,7 @@ async def _fetch_with_backoff(url: str, attempts: int = 3) -> tuple[bytes | None
             if data is not None:
                 return data, reason
             if reason.startswith(("http_403", "http_429", "timeout")):
-                await asyncio.sleep(min(4.0, 0.6 * (2 ** i) + random.uniform(0, 0.35)))
+                await asyncio.sleep(min(4.0, 0.6 * (2**i) + random.uniform(0, 0.35)))
             elif i < attempts - 1:
                 await asyncio.sleep(0.5 + random.uniform(0, 0.2))
             else:
@@ -157,6 +169,7 @@ def _parse_pdf(pdf_bytes: bytes) -> str | None:
     """Extract text from PDF bytes using pypdf. Returns None on failure."""
     try:
         from pypdf import PdfReader
+
         reader = PdfReader(io.BytesIO(pdf_bytes))
         parts: list[str] = []
         for page in reader.pages:
@@ -168,8 +181,13 @@ def _parse_pdf(pdf_bytes: bytes) -> str | None:
             return None
         chars_raw = len(full)
         capped = full[:_MAX_TEXT_CHARS]
-        log.info("pdf_parsed", pages=len(reader.pages), chars_raw=chars_raw,
-                 chars_capped=len(capped), preview=capped[:120].replace("\n", " "))
+        log.info(
+            "pdf_parsed",
+            pages=len(reader.pages),
+            chars_raw=chars_raw,
+            chars_capped=len(capped),
+            preview=capped[:120].replace("\n", " "),
+        )
         return capped
     except Exception as e:
         log.warning("pdf_parse_failed", error=str(e))

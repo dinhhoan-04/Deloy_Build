@@ -33,6 +33,7 @@ class JWKSCache:
 
     async def _refresh(self) -> None:
         from cryptography.hazmat.primitives import serialization as _ser
+
         async with httpx.AsyncClient(timeout=5.0) as c:
             r = await c.get(GOOGLE_JWKS_URL)
             r.raise_for_status()
@@ -40,10 +41,14 @@ class JWKSCache:
         new: dict[str, str] = {}
         for k in jwks.get("keys", []):
             kid = k["kid"]
-            new[kid] = jwt.algorithms.RSAAlgorithm.from_jwk(k).public_bytes(
-                encoding=_ser.Encoding.PEM,
-                format=_ser.PublicFormat.SubjectPublicKeyInfo,
-            ).decode()
+            new[kid] = (
+                jwt.algorithms.RSAAlgorithm.from_jwk(k)
+                .public_bytes(
+                    encoding=_ser.Encoding.PEM,
+                    format=_ser.PublicFormat.SubjectPublicKeyInfo,
+                )
+                .decode()
+            )
         self._keys = new
         self._fetched_at = time.time()
 

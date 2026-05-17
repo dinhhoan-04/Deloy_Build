@@ -10,6 +10,7 @@ pytestmark = pytest.mark.contract
 def app():
     os.environ.setdefault("RK_MCP_TOKEN", "test-mcp-token")
     from app.main import create_app
+
     return create_app()
 
 

@@ -38,6 +38,7 @@ class RedisIdem:
             stored = json.loads(existing)
             if stored["hash"] != payload_hash:
                 from app.errors import ConflictError
+
                 raise ConflictError("idempotency_key reused with different payload")
             return stored.get("value")
         if value is not None:

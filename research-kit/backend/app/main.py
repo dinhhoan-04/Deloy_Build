@@ -19,6 +19,7 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         from app.db import init_engine
+
         init_engine(get_settings().async_database_url)
         yield
 
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
     from app.routers import verify as verify_router
     from app.routers import demo as demo_router
     from app.routers import drafts as drafts_router
+
     app.include_router(auth_router.router)
     app.include_router(projects_router.router)
     app.include_router(claims_router.router)

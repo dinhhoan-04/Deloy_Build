@@ -23,7 +23,10 @@ EXTRACT_SCHEMA: dict = {
                     "url": {"anyOf": [{"type": "string"}, {"type": "null"}]},
                     "authors": {"type": "array", "items": {"type": "string"}},
                     "year": {"anyOf": [{"type": "integer"}, {"type": "null"}]},
-                    "anchorText": {"type": "string", "description": "Marker as it appears on page, e.g. [1], (Smith 2023)"},
+                    "anchorText": {
+                        "type": "string",
+                        "description": "Marker as it appears on page, e.g. [1], (Smith 2023)",
+                    },
                 },
             },
         },

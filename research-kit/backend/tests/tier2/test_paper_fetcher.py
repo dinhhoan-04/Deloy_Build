@@ -10,9 +10,15 @@ async def test_arxiv_url_fetches_html():
     mock_response.status_code = 200
     mock_response.text = html_content
 
-    with patch("app.services.tier2.paper_fetcher._fetch_url", new_callable=AsyncMock, return_value=mock_response), \
-         patch("app.db.cache.get", new_callable=AsyncMock, return_value=None), \
-         patch("app.db.cache.set", new_callable=AsyncMock):
+    with (
+        patch(
+            "app.services.tier2.paper_fetcher._fetch_url",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ),
+        patch("app.db.cache.get", new_callable=AsyncMock, return_value=None),
+        patch("app.db.cache.set", new_callable=AsyncMock),
+    ):
         text, accessibility = await fetch_paper("https://arxiv.org/abs/1810.04805")
 
     assert "93.2%" in text
@@ -35,9 +41,15 @@ async def test_inaccessible_paper_returns_none():
     mock_response = MagicMock()
     mock_response.status_code = 404
 
-    with patch("app.services.tier2.paper_fetcher._fetch_url", new_callable=AsyncMock, return_value=mock_response), \
-         patch("app.db.cache.get", new_callable=AsyncMock, return_value=None), \
-         patch("app.db.cache.set", new_callable=AsyncMock):
+    with (
+        patch(
+            "app.services.tier2.paper_fetcher._fetch_url",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ),
+        patch("app.db.cache.get", new_callable=AsyncMock, return_value=None),
+        patch("app.db.cache.set", new_callable=AsyncMock),
+    ):
         text, accessibility = await fetch_paper("https://example.com/paywalled")
 
     assert text is None
@@ -46,9 +58,15 @@ async def test_inaccessible_paper_returns_none():
 
 @pytest.mark.asyncio
 async def test_network_error_returns_none():
-    with patch("app.services.tier2.paper_fetcher._fetch_url", new_callable=AsyncMock, side_effect=Exception("network error")), \
-         patch("app.db.cache.get", new_callable=AsyncMock, return_value=None), \
-         patch("app.db.cache.set", new_callable=AsyncMock):
+    with (
+        patch(
+            "app.services.tier2.paper_fetcher._fetch_url",
+            new_callable=AsyncMock,
+            side_effect=Exception("network error"),
+        ),
+        patch("app.db.cache.get", new_callable=AsyncMock, return_value=None),
+        patch("app.db.cache.set", new_callable=AsyncMock),
+    ):
         text, accessibility = await fetch_paper("https://arxiv.org/abs/9999.99999")
 
     assert text is None

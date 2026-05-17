@@ -7,6 +7,7 @@ def test_settings_loads_from_env(monkeypatch):
     monkeypatch.setenv("GOCLAW_TOKEN", "t")
     monkeypatch.setenv("DEV_AUTH_BYPASS", "false")
     from app.config import Settings, get_settings
+
     get_settings.cache_clear()
     s = Settings()
     assert s.env == "development"

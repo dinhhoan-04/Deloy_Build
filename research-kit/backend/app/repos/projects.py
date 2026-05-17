@@ -20,9 +20,7 @@ class ProjectRepo:
         return list(
             (
                 await self.s.execute(
-                    select(Project)
-                    .where(Project.user_id == user_id)
-                    .order_by(Project.created_at)
+                    select(Project).where(Project.user_id == user_id).order_by(Project.created_at)
                 )
             ).scalars()
         )

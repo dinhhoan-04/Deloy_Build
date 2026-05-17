@@ -21,13 +21,11 @@ def test_collect_endpoint_accepts_request(client):
                 "claims": [
                     {
                         "text": "Sleep helps memory consolidation",
-                        "citations": [
-                            {"ref_id": "1", "url": "https://doi.org/10.1234/example"}
-                        ]
+                        "citations": [{"ref_id": "1", "url": "https://doi.org/10.1234/example"}],
                     }
-                ]
+                ],
             }
-        ]
+        ],
     }
     response = client.post("/api/v1/collect", json=payload)
     assert response.status_code == 200
@@ -51,13 +49,11 @@ def test_collect_endpoint_docx_format(client):
                 "claims": [
                     {
                         "text": "AI systems can learn patterns",
-                        "citations": [
-                            {"ref_id": "1", "url": "https://example.com/paper"}
-                        ]
+                        "citations": [{"ref_id": "1", "url": "https://example.com/paper"}],
                     }
-                ]
+                ],
             }
-        ]
+        ],
     }
     response = client.post("/api/v1/collect", json=payload)
     assert response.status_code == 200

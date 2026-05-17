@@ -25,4 +25,3 @@ def test_to_utc_naive_aware_non_utc():
     out = to_utc_naive(dt)
     assert out == datetime(2026, 5, 14, 3, 0, 0)
     assert out.tzinfo is None
-

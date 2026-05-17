@@ -18,6 +18,7 @@ _cache: dict[str, tuple[float, Optional["PaperInfo"]]] = {}
 _last_openalex_req_at: float = 0.0
 _openalex_lock = asyncio.Lock()
 
+
 @dataclass
 class PaperInfo:
     doi: Optional[str]
@@ -26,9 +27,9 @@ class PaperInfo:
     authors: list[str]
     year: Optional[int]
 
+
 async def lookup_paper(
-    doi: Optional[str] = None,
-    title: Optional[str] = None
+    doi: Optional[str] = None, title: Optional[str] = None
 ) -> Optional[PaperInfo]:
     """Lookup paper via OpenAlex. Returns None if not found."""
     cache_key = _build_cache_key(doi=doi, title=title)
@@ -104,9 +105,7 @@ async def _openalex_rate_limit() -> None:
         _last_openalex_req_at = time.monotonic()
 
 
-async def _openalex_get(
-    client: httpx.AsyncClient, url: str, params: dict
-) -> httpx.Response | None:
+async def _openalex_get(client: httpx.AsyncClient, url: str, params: dict) -> httpx.Response | None:
     last_resp: httpx.Response | None = None
     for i in range(_OPENALEX_MAX_RETRIES):
         await _openalex_rate_limit()
@@ -114,22 +113,23 @@ async def _openalex_get(
             resp = await client.get(url, params=params)
         except httpx.HTTPError:
             if i < _OPENALEX_MAX_RETRIES - 1:
-                await asyncio.sleep(min(3.0, 0.4 * (2 ** i) + random.uniform(0, 0.2)))
+                await asyncio.sleep(min(3.0, 0.4 * (2**i) + random.uniform(0, 0.2)))
                 continue
             return None
 
         last_resp = resp
         if resp.status_code == 429:
             if i < _OPENALEX_MAX_RETRIES - 1:
-                await asyncio.sleep(min(6.0, 0.8 * (2 ** i) + random.uniform(0, 0.3)))
+                await asyncio.sleep(min(6.0, 0.8 * (2**i) + random.uniform(0, 0.3)))
                 continue
             return resp
         if resp.status_code >= 500:
             if i < _OPENALEX_MAX_RETRIES - 1:
-                await asyncio.sleep(min(4.0, 0.5 * (2 ** i) + random.uniform(0, 0.2)))
+                await asyncio.sleep(min(4.0, 0.5 * (2**i) + random.uniform(0, 0.2)))
                 continue
         return resp
     return last_resp
+
 
 def _parse_work(data: dict) -> PaperInfo:
     doi_raw = data.get("doi", "")

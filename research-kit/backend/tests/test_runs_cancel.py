@@ -5,7 +5,10 @@ import redis.asyncio as aioredis
 @pytest.mark.asyncio
 async def test_cancel_writes_redis_key_and_status(client_dev_alice, monkeypatch, redis_container):
     from app import queue as q
-    async def noop(*a, **k): pass
+
+    async def noop(*a, **k):
+        pass
+
     monkeypatch.setattr(q, "enqueue_run", noop)
 
     body = {"kind": "verify", "input": {}, "idempotency_key": "kc"}

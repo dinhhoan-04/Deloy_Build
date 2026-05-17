@@ -14,8 +14,10 @@ async def test_dev_bypass_creates_user(pg_url, monkeypatch):
     monkeypatch.setenv("GOCLAW_URL", "http://x")
     monkeypatch.setenv("GOCLAW_TOKEN", "t")
     from app.config import get_settings
+
     get_settings.cache_clear()
     import app.db as _db
+
     _db.init_engine(pg_url)
     from app.main import create_app
     from app.deps import current_user

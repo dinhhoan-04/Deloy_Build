@@ -256,7 +256,9 @@ async def bootstrap_demo(u: User = Depends(current_user), s: AsyncSession = Depe
             kind="draft",
             status=RunStatus.SUCCEEDED.value,
             input={
-                "claims": [{"id": str(c.id), "text": c.text, "verdict": c.status} for c in claim_rows[:2]],
+                "claims": [
+                    {"id": str(c.id), "text": c.text, "verdict": c.status} for c in claim_rows[:2]
+                ],
                 "style": "short",
             },
             result={"markdown": draft_markdown},
@@ -279,7 +281,10 @@ async def bootstrap_demo(u: User = Depends(current_user), s: AsyncSession = Depe
                 run_id=draft_run.id,
                 seq=2,
                 type="final",
-                payload={"content": json.dumps({"markdown": draft_markdown}), "usage": {"mode": "demo_seed"}},
+                payload={
+                    "content": json.dumps({"markdown": draft_markdown}),
+                    "usage": {"mode": "demo_seed"},
+                },
             )
         )
         s.add(

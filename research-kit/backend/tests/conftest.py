@@ -18,7 +18,8 @@ from alembic.config import Config
 
 
 class _RedisInfo:
-    def __init__(self, url: str): self.url = url
+    def __init__(self, url: str):
+        self.url = url
 
 
 @pytest.fixture(scope="session")
@@ -43,6 +44,7 @@ def _db_url_for_alembic(sync_url: str) -> str:
 @pytest.fixture(autouse=True)
 def reset_redis_pool():
     import app.redis_pool as _rp
+
     _rp._redis = None
     yield
     _rp._redis = None
@@ -63,6 +65,7 @@ def pg_url():
 @pytest.fixture
 async def db_engine(pg_url):
     import app.db as _db
+
     _db.init_engine(pg_url)
     yield _db._sessionmaker
 
@@ -70,11 +73,14 @@ async def db_engine(pg_url):
 @pytest.fixture
 async def client(pg_url):
     from app.config import get_settings
+
     get_settings.cache_clear()
     os.environ["DATABASE_URL"] = pg_url
     import app.db as _db
+
     _db.init_engine(pg_url)
     from app.main import create_app
+
     _app = create_app()
     async with AsyncClient(transport=ASGITransport(app=_app), base_url="http://test") as c:
         yield c
@@ -83,9 +89,11 @@ async def client(pg_url):
 async def _dev_client(pg_url: str, dev_user: str):
     import app.db as _db
     from app.config import get_settings
+
     get_settings.cache_clear()
     _db.init_engine(pg_url)
     from app.main import create_app
+
     _app = create_app()
     return AsyncClient(
         transport=ASGITransport(app=_app),
@@ -109,6 +117,7 @@ async def client_dev_bob(pg_url):
 @pytest.fixture
 async def async_session(pg_url):
     import app.db as _db
+
     _db.init_engine(pg_url)
     sm = _db.sessionmaker()
     async with sm() as s:

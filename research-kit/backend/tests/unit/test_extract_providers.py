@@ -31,9 +31,7 @@ GEMINI_OK = {
                                         "anchorText": "[1]",
                                     }
                                 ],
-                                "claims": [
-                                    {"id": "c1", "text": "y", "paperIds": ["p1"]}
-                                ],
+                                "claims": [{"id": "c1", "text": "y", "paperIds": ["p1"]}],
                             }
                         )
                     }
@@ -211,7 +209,9 @@ async def test_zai_413_maps_to_payload_too_large():
     with patch("app.llm.providers.AsyncOpenAI") as cls:
         client = cls.return_value
         client.chat.completions.create = AsyncMock(
-            side_effect=Exception("Error code: 413 - Request too large for model on tokens per minute")
+            side_effect=Exception(
+                "Error code: 413 - Request too large for model on tokens per minute"
+            )
         )
         provider = ZaiProvider(api_key="k", model="glm-4.7")
         with pytest.raises(PayloadTooLargeError):
@@ -225,15 +225,29 @@ from app.llm import extract_via_llm, ExtractFailed, ExtractResult
 async def test_orchestrator_uses_primary_when_ok():
     primary = MagicMock()
     primary.name = "gemini"
-    primary.extract = AsyncMock(return_value={
-        "papers": [{"id": "p1", "title": "X", "doi": None, "url": None, "authors": [], "year": None, "anchorText": ""}],
-        "claims": [{"id": "c1", "text": "y", "paperIds": ["p1"]}],
-    })
+    primary.extract = AsyncMock(
+        return_value={
+            "papers": [
+                {
+                    "id": "p1",
+                    "title": "X",
+                    "doi": None,
+                    "url": None,
+                    "authors": [],
+                    "year": None,
+                    "anchorText": "",
+                }
+            ],
+            "claims": [{"id": "c1", "text": "y", "paperIds": ["p1"]}],
+        }
+    )
     fallback = MagicMock()
     fallback.extract = AsyncMock()
 
     result = await extract_via_llm(
-        markdown="md", site="elicit", url="http://x",
+        markdown="md",
+        site="elicit",
+        url="http://x",
         providers=[primary, fallback],
     )
     assert isinstance(result, ExtractResult)
@@ -248,13 +262,27 @@ async def test_orchestrator_falls_back_on_ratelimit():
     primary.extract = AsyncMock(side_effect=RateLimitError("quota"))
     fallback = MagicMock()
     fallback.name = "openai"
-    fallback.extract = AsyncMock(return_value={
-        "papers": [{"id": "p1", "title": "X", "doi": None, "url": None, "authors": [], "year": None, "anchorText": ""}],
-        "claims": [{"id": "c1", "text": "y", "paperIds": ["p1"]}],
-    })
+    fallback.extract = AsyncMock(
+        return_value={
+            "papers": [
+                {
+                    "id": "p1",
+                    "title": "X",
+                    "doi": None,
+                    "url": None,
+                    "authors": [],
+                    "year": None,
+                    "anchorText": "",
+                }
+            ],
+            "claims": [{"id": "c1", "text": "y", "paperIds": ["p1"]}],
+        }
+    )
 
     result = await extract_via_llm(
-        markdown="md", site="elicit", url="http://x",
+        markdown="md",
+        site="elicit",
+        url="http://x",
         providers=[primary, fallback],
     )
     assert result.meta["provider"] == "openai"
@@ -262,14 +290,18 @@ async def test_orchestrator_falls_back_on_ratelimit():
 
 @pytest.mark.asyncio
 async def test_orchestrator_raises_when_all_fail():
-    primary = MagicMock(); primary.name = "gemini"
+    primary = MagicMock()
+    primary.name = "gemini"
     primary.extract = AsyncMock(side_effect=ProviderError("boom"))
-    fallback = MagicMock(); fallback.name = "openai"
+    fallback = MagicMock()
+    fallback.name = "openai"
     fallback.extract = AsyncMock(side_effect=ProviderError("boom2"))
 
     with pytest.raises(ExtractFailed):
         await extract_via_llm(
-            markdown="md", site="elicit", url="http://x",
+            markdown="md",
+            site="elicit",
+            url="http://x",
             providers=[primary, fallback],
         )
 
@@ -277,16 +309,31 @@ async def test_orchestrator_raises_when_all_fail():
 @pytest.mark.asyncio
 async def test_orchestrator_runs_validator():
     """Orphan paperIds should be dropped before returning."""
-    primary = MagicMock(); primary.name = "gemini"
-    primary.extract = AsyncMock(return_value={
-        "papers": [{"id": "p1", "title": "X", "doi": None, "url": None, "authors": [], "year": None, "anchorText": ""}],
-        "claims": [
-            {"id": "c1", "text": "ok", "paperIds": ["p1"]},
-            {"id": "c2", "text": "orphan", "paperIds": ["p99"]},
-        ],
-    })
+    primary = MagicMock()
+    primary.name = "gemini"
+    primary.extract = AsyncMock(
+        return_value={
+            "papers": [
+                {
+                    "id": "p1",
+                    "title": "X",
+                    "doi": None,
+                    "url": None,
+                    "authors": [],
+                    "year": None,
+                    "anchorText": "",
+                }
+            ],
+            "claims": [
+                {"id": "c1", "text": "ok", "paperIds": ["p1"]},
+                {"id": "c2", "text": "orphan", "paperIds": ["p99"]},
+            ],
+        }
+    )
     result = await extract_via_llm(
-        markdown="md", site="elicit", url="http://x",
+        markdown="md",
+        site="elicit",
+        url="http://x",
         providers=[primary],
     )
     assert [c["id"] for c in result.claims] == ["c1"]

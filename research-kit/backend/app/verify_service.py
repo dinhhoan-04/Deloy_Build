@@ -10,10 +10,12 @@ from app.openalex import lookup_paper
 
 _claude = anthropic.AsyncAnthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 
+
 class VerifyStatus(str, Enum):
     VERIFIED = "verified"
     PARTIAL = "partial"
     NOT_FOUND = "not_found"
+
 
 @dataclass
 class VerifyResult:
@@ -23,6 +25,7 @@ class VerifyResult:
     reason: str
     paper_title: Optional[str] = None
     doi: Optional[str] = None
+
 
 async def verify_claim(
     claim: str,
@@ -36,7 +39,7 @@ async def verify_claim(
             status=VerifyStatus.NOT_FOUND,
             verbatim_quote=None,
             confidence=0.0,
-            reason="Paper not found in OpenAlex"
+            reason="Paper not found in OpenAlex",
         )
 
     fulltext = None
@@ -63,20 +66,25 @@ async def verify_claim(
         doi=paper.doi,
     )
 
+
 async def _fetch_text(url: str) -> Optional[str]:
     try:
         async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-            resp = await client.get(url, headers={"User-Agent": "ResearchKit/1.0 (mailto:research@researchkit.app)"})
+            resp = await client.get(
+                url, headers={"User-Agent": "ResearchKit/1.0 (mailto:research@researchkit.app)"}
+            )
             if resp.status_code != 200:
                 return None
             text = resp.text
             if "<html" in text.lower():
                 import re
+
                 text = re.sub(r"<[^>]+>", " ", text)
                 text = re.sub(r"\s+", " ", text)
             return text[:50000]  # Cap at 50k chars
     except Exception:
         return None
+
 
 async def _call_claude(claim: str, fulltext: str) -> dict:
     prompt = f"""You are a scientific claim verifier. Given a claim and a paper's full text, determine if the claim is supported.

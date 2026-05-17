@@ -28,9 +28,9 @@ class Settings(BaseSettings):
         # Render injects "postgres://" — asyncpg needs "postgresql+asyncpg://"
         url = self.database_url
         if url.startswith("postgres://"):
-            url = "postgresql+asyncpg://" + url[len("postgres://"):]
+            url = "postgresql+asyncpg://" + url[len("postgres://") :]
         elif url.startswith("postgresql://") and "+asyncpg" not in url:
-            url = "postgresql+asyncpg://" + url[len("postgresql://"):]
+            url = "postgresql+asyncpg://" + url[len("postgresql://") :]
         # asyncpg doesn't support 'sslmode'; use 'ssl' instead
         url = url.replace("sslmode=", "ssl=")
         return url

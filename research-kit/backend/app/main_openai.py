@@ -27,6 +27,7 @@ from app.verify_service import verify_claim
 
 ProviderType = Literal["anthropic", "openai", "gemini"]
 
+
 # Pydantic models for API
 class VerifyRequest(BaseModel):
     claim: str
@@ -35,10 +36,12 @@ class VerifyRequest(BaseModel):
     paper_title: Optional[str] = None
     provider: Optional[ProviderType] = None
 
+
 class ExtractRequest(BaseModel):
     page_text: str
     site: str  # "elicit" | "consensus" | "scispace"
     provider: Optional[ProviderType] = None
+
 
 # In-memory DOI cache — key: doi, value: VerifyResult
 _verify_cache: Dict[str, Any] = {}
@@ -174,10 +177,12 @@ async def websocket_endpoint(websocket: WebSocket):
             if msg_type == "agent:run":
                 await handle_agent_run(websocket, data)
             else:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"Unknown message type: {msg_type}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": f"Unknown message type: {msg_type}",
+                    }
+                )
 
     except WebSocketDisconnect:
         logger.info(f"[WS] Connection closed from {websocket.client}")
@@ -200,10 +205,12 @@ async def handle_agent_run(websocket: WebSocket, data: Dict[str, Any]) -> None:
         return
 
     if provider not in PROVIDER_MODELS:
-        await websocket.send_json({
-            "type": "error",
-            "message": f"Unknown provider '{provider}'. Available: {list(PROVIDER_MODELS.keys())}",
-        })
+        await websocket.send_json(
+            {
+                "type": "error",
+                "message": f"Unknown provider '{provider}'. Available: {list(PROVIDER_MODELS.keys())}",
+            }
+        )
         return
 
     model = PROVIDER_MODELS[provider]
@@ -212,15 +219,19 @@ async def handle_agent_run(websocket: WebSocket, data: Dict[str, Any]) -> None:
     # Build context from PageModels - highlight page content
     context_parts = []
     for i, pm in enumerate(page_models):
-        context_parts.append(f"=== Page {i+1}: {pm.get('site', 'unknown')} ===")
+        context_parts.append(f"=== Page {i + 1}: {pm.get('site', 'unknown')} ===")
         context_parts.append(f"Title: {pm.get('title', 'N/A')}")
         context_parts.append(f"URL: {pm.get('url', 'N/A')}")
-        if pm.get('content'):
+        if pm.get("content"):
             context_parts.append(f"\nPage Content ({pm.get('contentLength', 0)} chars):")
-            context_parts.append(pm['content'])
+            context_parts.append(pm["content"])
         context_parts.append("")
 
-    context_str = "\n".join(context_parts) if context_parts else json.dumps({"page_models": page_models}, indent=2)
+    context_str = (
+        "\n".join(context_parts)
+        if context_parts
+        else json.dumps({"page_models": page_models}, indent=2)
+    )
     full_query = f"User Question: {request}\n\n<page_context>\n{context_str}\n</page_context>"
 
     try:
@@ -231,10 +242,12 @@ async def handle_agent_run(websocket: WebSocket, data: Dict[str, Any]) -> None:
         elif provider == "gemini":
             await stream_gemini(websocket, full_query, model)
         else:
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Provider {provider} not implemented",
-            })
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": f"Provider {provider} not implemented",
+                }
+            )
     except Exception as e:
         logger.exception(f"[Agent] Error with {provider}")
         await websocket.send_json({"type": "error", "message": str(e)})
@@ -258,10 +271,12 @@ async def stream_openai(websocket: WebSocket, query: str, model: str) -> None:
 
     async for chunk in stream:
         if chunk.choices[0].delta.content:
-            await websocket.send_json({
-                "type": "text",
-                "delta": chunk.choices[0].delta.content,
-            })
+            await websocket.send_json(
+                {
+                    "type": "text",
+                    "delta": chunk.choices[0].delta.content,
+                }
+            )
 
     await websocket.send_json({"type": "done", "stop_reason": "end_turn"})
     logger.info("[Agent] OpenAI stream complete")
@@ -285,10 +300,12 @@ async def stream_zai(websocket: WebSocket, query: str, model: str) -> None:
 
     async for chunk in stream:
         if chunk.choices[0].delta.content:
-            await websocket.send_json({
-                "type": "text",
-                "delta": chunk.choices[0].delta.content,
-            })
+            await websocket.send_json(
+                {
+                    "type": "text",
+                    "delta": chunk.choices[0].delta.content,
+                }
+            )
 
     await websocket.send_json({"type": "done", "stop_reason": "end_turn"})
     logger.info("[Agent] Z.ai stream complete")
@@ -308,9 +325,7 @@ async def stream_gemini(websocket: WebSocket, query: str, model: str) -> None:
             params={"key": GEMINI_API_KEY},
             json={
                 "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-                "contents": [
-                    {"parts": [{"text": query}]}
-                ],
+                "contents": [{"parts": [{"text": query}]}],
                 "generation_config": {
                     "temperature": 0.7,
                 },
@@ -320,10 +335,12 @@ async def stream_gemini(websocket: WebSocket, query: str, model: str) -> None:
         if response.status_code != 200:
             error_text = response.text
             logger.error(f"Gemini error {response.status_code}: {error_text}")
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Gemini API error: {error_text}",
-            })
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": f"Gemini API error: {error_text}",
+                }
+            )
             return
 
         try:
@@ -334,16 +351,20 @@ async def stream_gemini(websocket: WebSocket, query: str, model: str) -> None:
                     if "content" in candidate:
                         for part in candidate["content"].get("parts", []):
                             if "text" in part:
-                                await websocket.send_json({
-                                    "type": "text",
-                                    "delta": part["text"],
-                                })
+                                await websocket.send_json(
+                                    {
+                                        "type": "text",
+                                        "delta": part["text"],
+                                    }
+                                )
         except json.JSONDecodeError:
             logger.error(f"Failed to parse Gemini response: {response.text}")
-            await websocket.send_json({
-                "type": "error",
-                "message": "Failed to parse Gemini response",
-            })
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "message": "Failed to parse Gemini response",
+                }
+            )
             return
 
         await websocket.send_json({"type": "done", "stop_reason": "end_turn"})
@@ -399,6 +420,7 @@ async def extract_endpoint(_req: ExtractRequest):
     in app.routers.extract (POST /v1/extract) via app.llm.extract_via_llm.
     """
     from fastapi import HTTPException
+
     raise HTTPException(
         status_code=410,
         detail="extract_service has been removed. Use POST /v1/extract via the main app.",
@@ -407,4 +429,5 @@ async def extract_endpoint(_req: ExtractRequest):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app.main_openai:app", host="0.0.0.0", port=9000, reload=False)

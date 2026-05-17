@@ -22,7 +22,15 @@ async def test_verify_scoped_cache_hit(client_dev_alice, db_engine, monkeypatch)
     async def fake_llm_verify(claim, doi, title, paper_text):
         calls["llm"] += 1
         from app.routers.verify import VerifyResponse
-        return VerifyResponse(status="verified", verbatim_quote="paper text", confidence=0.9, reason="ok", paper_title=title, doi=doi), "openai"
+
+        return VerifyResponse(
+            status="verified",
+            verbatim_quote="paper text",
+            confidence=0.9,
+            reason="ok",
+            paper_title=title,
+            doi=doi,
+        ), "openai"
 
     monkeypatch.setattr("app.routers.verify.fetch_paper_content", fake_fetch_paper_content)
     monkeypatch.setattr("app.routers.verify._llm_verify", fake_llm_verify)
@@ -50,7 +58,12 @@ async def test_verify_upload_fallback_from_payload_too_large(client, monkeypatch
             self.calls += 1
             if self.name == "zai":
                 raise PayloadTooLargeError("413")
-            return {"status": "partial", "verbatim_quote": None, "confidence": 0.4, "reason": "fallback"}
+            return {
+                "status": "partial",
+                "verbatim_quote": None,
+                "confidence": 0.4,
+                "reason": "fallback",
+            }
 
     providers = [_Provider("zai"), _Provider("openai")]
     monkeypatch.setattr("app.routers.verify._provider_chain", lambda: providers)

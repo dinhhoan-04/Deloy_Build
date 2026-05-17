@@ -8,20 +8,27 @@ async def test_login_me_logout(client, monkeypatch, db_engine):
     # set GOOGLE_CLIENT_ID to match what we sign with
     monkeypatch.setenv("GOOGLE_CLIENT_ID", "cid")
     from app.config import get_settings
+
     get_settings.cache_clear()
 
     key, _ = make_keypair()
     from app.deps import google_verifier
+
     # reset cached verifier so it picks up new client_id
     import app.deps as _deps
+
     _deps._google_verifier = None
     get_settings.cache_clear()
 
     gv = google_verifier()
-    pub_pem = key.public_key().public_bytes(
-        serialization.Encoding.PEM,
-        serialization.PublicFormat.SubjectPublicKeyInfo,
-    ).decode()
+    pub_pem = (
+        key.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode()
+    )
     gv.jwks._set_for_test({"k1": pub_pem})
 
     token = issue_id_token(sub="g-x", email="t@x", aud="cid", kid="k1", key=key)

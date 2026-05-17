@@ -16,8 +16,19 @@ def test_migration_creates_all_tables():
         eng = create_engine(sync_url)
         insp = inspect(eng)
         tables = set(insp.get_table_names())
-        expected = {"users","sessions","projects","claims","inbox_items",
-                    "conflicts","runs","run_events","verify_cache",
-                    "paper_content","paper_content_cache","verify_result_cache",
-                    "alembic_version"}
+        expected = {
+            "users",
+            "sessions",
+            "projects",
+            "claims",
+            "inbox_items",
+            "conflicts",
+            "runs",
+            "run_events",
+            "verify_cache",
+            "paper_content",
+            "paper_content_cache",
+            "verify_result_cache",
+            "alembic_version",
+        }
         assert expected.issubset(tables)

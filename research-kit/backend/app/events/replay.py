@@ -13,7 +13,9 @@ TERMINAL_TYPES = {"final", "error"}
 
 
 async def replay_then_tail(
-    *, run_id: UUID, last_seq: int,
+    *,
+    run_id: UUID,
+    last_seq: int,
     sessionmaker: async_sessionmaker[AsyncSession],
     redis: aioredis.Redis,
     initial_status: str,
@@ -28,14 +30,22 @@ async def replay_then_tail(
     try:
         # Phase 1: replay from PG strictly > last_seq, ascending.
         async with sessionmaker() as s:
-            rows = list((await s.execute(
-                select(RunEventRow)
-                .where(RunEventRow.run_id == run_id, RunEventRow.seq > last_seq)
-                .order_by(RunEventRow.seq)
-            )).scalars())
+            rows = list(
+                (
+                    await s.execute(
+                        select(RunEventRow)
+                        .where(RunEventRow.run_id == run_id, RunEventRow.seq > last_seq)
+                        .order_by(RunEventRow.seq)
+                    )
+                ).scalars()
+            )
         for row in rows:
-            payload = {"seq": row.seq, "type": row.type,
-                       "payload": row.payload, "ts": row.ts.isoformat()}
+            payload = {
+                "seq": row.seq,
+                "type": row.type,
+                "payload": row.payload,
+                "ts": row.ts.isoformat(),
+            }
             yield payload
             max_seq_sent = row.seq
             if row.type in TERMINAL_TYPES:
@@ -43,14 +53,22 @@ async def replay_then_tail(
 
         if initial_status in {"succeeded", "failed", "cancelled"}:
             async with sessionmaker() as s:
-                rows = list((await s.execute(
-                    select(RunEventRow)
-                    .where(RunEventRow.run_id == run_id, RunEventRow.seq > max_seq_sent)
-                    .order_by(RunEventRow.seq)
-                )).scalars())
+                rows = list(
+                    (
+                        await s.execute(
+                            select(RunEventRow)
+                            .where(RunEventRow.run_id == run_id, RunEventRow.seq > max_seq_sent)
+                            .order_by(RunEventRow.seq)
+                        )
+                    ).scalars()
+                )
             for row in rows:
-                payload = {"seq": row.seq, "type": row.type,
-                           "payload": row.payload, "ts": row.ts.isoformat()}
+                payload = {
+                    "seq": row.seq,
+                    "type": row.type,
+                    "payload": row.payload,
+                    "ts": row.ts.isoformat(),
+                }
                 yield payload
                 max_seq_sent = row.seq
             return

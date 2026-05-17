@@ -3,7 +3,17 @@ from app.llm.validator import validate_correspondence
 
 def test_passthrough_when_valid():
     raw = {
-        "papers": [{"id": "p1", "title": "A", "doi": None, "url": None, "authors": [], "year": None, "anchorText": "[1]"}],
+        "papers": [
+            {
+                "id": "p1",
+                "title": "A",
+                "doi": None,
+                "url": None,
+                "authors": [],
+                "year": None,
+                "anchorText": "[1]",
+            }
+        ],
         "claims": [{"id": "c1", "text": "claim text", "paperIds": ["p1"]}],
     }
     cleaned, warnings = validate_correspondence(raw)
@@ -14,7 +24,17 @@ def test_passthrough_when_valid():
 
 def test_drops_claim_with_orphan_paper_id():
     raw = {
-        "papers": [{"id": "p1", "title": "A", "doi": None, "url": None, "authors": [], "year": None, "anchorText": ""}],
+        "papers": [
+            {
+                "id": "p1",
+                "title": "A",
+                "doi": None,
+                "url": None,
+                "authors": [],
+                "year": None,
+                "anchorText": "",
+            }
+        ],
         "claims": [
             {"id": "c1", "text": "ok", "paperIds": ["p1"]},
             {"id": "c2", "text": "orphan", "paperIds": ["p99"]},
@@ -27,7 +47,17 @@ def test_drops_claim_with_orphan_paper_id():
 
 def test_drops_claim_when_some_paper_ids_orphan():
     raw = {
-        "papers": [{"id": "p1", "title": "A", "doi": None, "url": None, "authors": [], "year": None, "anchorText": ""}],
+        "papers": [
+            {
+                "id": "p1",
+                "title": "A",
+                "doi": None,
+                "url": None,
+                "authors": [],
+                "year": None,
+                "anchorText": "",
+            }
+        ],
         "claims": [{"id": "c1", "text": "mixed", "paperIds": ["p1", "p99"]}],
     }
     cleaned, warnings = validate_correspondence(raw)
@@ -38,8 +68,24 @@ def test_drops_claim_when_some_paper_ids_orphan():
 def test_merges_duplicate_titles():
     raw = {
         "papers": [
-            {"id": "p1", "title": "Same Title", "doi": "10.1/a", "url": None, "authors": [], "year": None, "anchorText": "[1]"},
-            {"id": "p2", "title": "Same Title", "doi": None, "url": "http://x", "authors": [], "year": None, "anchorText": "[2]"},
+            {
+                "id": "p1",
+                "title": "Same Title",
+                "doi": "10.1/a",
+                "url": None,
+                "authors": [],
+                "year": None,
+                "anchorText": "[1]",
+            },
+            {
+                "id": "p2",
+                "title": "Same Title",
+                "doi": None,
+                "url": "http://x",
+                "authors": [],
+                "year": None,
+                "anchorText": "[2]",
+            },
         ],
         "claims": [
             {"id": "c1", "text": "first", "paperIds": ["p1"]},
@@ -62,7 +108,17 @@ def test_handles_empty_input():
 
 def test_dedup_within_single_claim_paper_ids():
     raw = {
-        "papers": [{"id": "p1", "title": "A", "doi": None, "url": None, "authors": [], "year": None, "anchorText": ""}],
+        "papers": [
+            {
+                "id": "p1",
+                "title": "A",
+                "doi": None,
+                "url": None,
+                "authors": [],
+                "year": None,
+                "anchorText": "",
+            }
+        ],
         "claims": [{"id": "c1", "text": "x", "paperIds": ["p1", "p1"]}],
     }
     cleaned, _ = validate_correspondence(raw)

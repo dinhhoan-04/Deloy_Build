@@ -4,6 +4,7 @@ Each provider implements `extract(system, user, schema) -> dict`. Errors must
 be normalized to RateLimitError or ProviderError so the orchestrator can
 fall back cleanly.
 """
+
 from __future__ import annotations
 
 import json
@@ -44,12 +45,14 @@ def _strip_additional_properties(schema: dict) -> dict:
     canonical EXTRACT_SCHEMA and strip on the way to Gemini.
     """
     import copy
+
     def _strip(obj: object) -> object:
         if isinstance(obj, dict):
             return {k: _strip(v) for k, v in obj.items() if k != "additionalProperties"}
         if isinstance(obj, list):
             return [_strip(i) for i in obj]
         return obj
+
     return _strip(copy.deepcopy(schema))  # type: ignore[return-value]
 
 

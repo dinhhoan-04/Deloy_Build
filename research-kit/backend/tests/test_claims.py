@@ -38,7 +38,9 @@ async def test_batch_idem_conflict(client_dev_alice, redis_url):
 def test_idempotency_hash_handles_datetime_deterministically():
     payload = {
         "project_id": "p1",
-        "claims": [{"text": "x", "extracted_at": datetime(2026, 5, 13, 12, 0, tzinfo=timezone.utc)}],
+        "claims": [
+            {"text": "x", "extracted_at": datetime(2026, 5, 13, 12, 0, tzinfo=timezone.utc)}
+        ],
     }
     h1 = RedisIdem._hash(payload)
     h2 = RedisIdem._hash(payload)
@@ -51,11 +53,13 @@ async def test_batch_accepts_extracted_at_datetime(client_dev_alice):
     pid = r.json()["id"]
     body = {
         "project_id": pid,
-        "claims": [{
-            "text": "claim with extracted_at",
-            "site": "elicit",
-            "extracted_at": "2026-05-13T12:00:00Z",
-        }],
+        "claims": [
+            {
+                "text": "claim with extracted_at",
+                "site": "elicit",
+                "extracted_at": "2026-05-13T12:00:00Z",
+            }
+        ],
         "idempotency_key": "dt-1",
     }
     r1 = await client_dev_alice.post("/v1/claims/batch", json=body)
@@ -71,11 +75,13 @@ async def test_batch_accepts_extracted_at_with_non_utc_offset(client_dev_alice):
     pid = r.json()["id"]
     body = {
         "project_id": pid,
-        "claims": [{
-            "text": "claim with +07 extracted_at",
-            "site": "elicit",
-            "extracted_at": "2026-05-14T10:16:20+07:00",
-        }],
+        "claims": [
+            {
+                "text": "claim with +07 extracted_at",
+                "site": "elicit",
+                "extracted_at": "2026-05-14T10:16:20+07:00",
+            }
+        ],
         "idempotency_key": "dt-plus7-1",
     }
     resp = await client_dev_alice.post("/v1/claims/batch", json=body)

@@ -2,8 +2,11 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 from app.main import app
 from app.schemas import (
-    LinkResult, LinkComponents, SentenceResult, SentenceComponents,
-    LLMAssessment
+    LinkResult,
+    LinkComponents,
+    SentenceResult,
+    SentenceComponents,
+    LLMAssessment,
 )
 
 client = TestClient(app)
@@ -27,14 +30,22 @@ MOCK_SENTENCE = SentenceResult(
 
 
 def test_verify_returns_200_with_valid_input():
-    with patch("app.api.verify.validate_link", new_callable=AsyncMock, return_value=MOCK_LINK), \
-         patch("app.api.verify.fetch_paper", new_callable=AsyncMock, return_value=("paper text here", "open_access")), \
-         patch("app.api.verify.verify_sentence", new_callable=AsyncMock, return_value=MOCK_SENTENCE):
-
-        response = client.post("/api/v1/verify", json={
-            "text": "BERT achieves an F1 score of 93.2 on SQuAD [1].",
-            "citations": [{"ref_id": "1", "url": "https://arxiv.org/abs/1810.04805"}]
-        })
+    with (
+        patch("app.api.verify.validate_link", new_callable=AsyncMock, return_value=MOCK_LINK),
+        patch(
+            "app.api.verify.fetch_paper",
+            new_callable=AsyncMock,
+            return_value=("paper text here", "open_access"),
+        ),
+        patch("app.api.verify.verify_sentence", new_callable=AsyncMock, return_value=MOCK_SENTENCE),
+    ):
+        response = client.post(
+            "/api/v1/verify",
+            json={
+                "text": "BERT achieves an F1 score of 93.2 on SQuAD [1].",
+                "citations": [{"ref_id": "1", "url": "https://arxiv.org/abs/1810.04805"}],
+            },
+        )
 
     assert response.status_code == 200
     data = response.json()
@@ -45,18 +56,14 @@ def test_verify_returns_200_with_valid_input():
 
 
 def test_verify_returns_400_on_empty_text():
-    response = client.post("/api/v1/verify", json={
-        "text": "",
-        "citations": []
-    })
-    assert response.status_code == 422   # Pydantic min_length validation
+    response = client.post("/api/v1/verify", json={"text": "", "citations": []})
+    assert response.status_code == 422  # Pydantic min_length validation
 
 
 def test_verify_no_citations_all_na():
-    response_data = client.post("/api/v1/verify", json={
-        "text": "Some claim with no citations.",
-        "citations": []
-    }).json()
+    response_data = client.post(
+        "/api/v1/verify", json={"text": "Some claim with no citations.", "citations": []}
+    ).json()
 
     sentences = response_data["paragraphs"][0]["sentences"]
     assert all(s["status"] == "na_no_citation" for s in sentences)

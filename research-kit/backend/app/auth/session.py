@@ -22,6 +22,7 @@ class SessionService:
     @staticmethod
     def _now() -> datetime:
         from datetime import timezone
+
         return datetime.now(timezone.utc).replace(tzinfo=None)
 
     async def issue(self, s: AsyncSession, *, user_id: UUID) -> str:

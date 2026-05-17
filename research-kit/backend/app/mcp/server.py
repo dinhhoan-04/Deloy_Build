@@ -1,4 +1,5 @@
 """FastMCP server exposing RK inbox tools over streamable HTTP."""
+
 from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP

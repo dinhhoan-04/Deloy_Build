@@ -15,15 +15,36 @@ def app():
 @pytest.mark.asyncio
 async def test_extract_endpoint_happy_path(app):
     fake = ExtractResult(
-        papers=[{"id": "p1", "title": "X", "doi": None, "url": None, "authors": [], "year": None, "anchorText": ""}],
+        papers=[
+            {
+                "id": "p1",
+                "title": "X",
+                "doi": None,
+                "url": None,
+                "authors": [],
+                "year": None,
+                "anchorText": "",
+            }
+        ],
         claims=[{"id": "c1", "text": "y", "paperIds": ["p1"]}],
-        meta={"provider": "gemini", "latencyMs": 100, "inputChars": 5, "papersCount": 1, "claimsCount": 1, "warnings": []},
+        meta={
+            "provider": "gemini",
+            "latencyMs": 100,
+            "inputChars": 5,
+            "papersCount": 1,
+            "claimsCount": 1,
+            "warnings": [],
+        },
     )
     with patch("app.routers.extract.extract_via_llm", new=AsyncMock(return_value=fake)):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
             r = await c.post(
                 "/v1/extract",
-                json={"url": "http://elicit.com/notebook/abc", "site": "elicit", "page_markdown": "hello"},
+                json={
+                    "url": "http://elicit.com/notebook/abc",
+                    "site": "elicit",
+                    "page_markdown": "hello",
+                },
             )
     assert r.status_code == 200
     data = r.json()

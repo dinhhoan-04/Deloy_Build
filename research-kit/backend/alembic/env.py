@@ -13,7 +13,7 @@ db_url = os.environ.get("DATABASE_URL_SYNC") or os.environ.get("DATABASE_URL", "
 # Normalize: strip asyncpg driver, fix Render's "postgres://" shorthand
 db_url = db_url.replace("+asyncpg", "")
 if db_url.startswith("postgres://"):
-    db_url = "postgresql://" + db_url[len("postgres://"):]
+    db_url = "postgresql://" + db_url[len("postgres://") :]
 if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
 

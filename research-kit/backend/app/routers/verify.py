@@ -10,6 +10,7 @@ Endpoints:
   POST /v1/verify          — auto-fetch PDF by doi/url, then LLM verify.
   POST /v1/verify/upload   — user-supplied PDF bytes, then LLM verify.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -101,22 +102,39 @@ Rules:
 
 def _provider_chain() -> list[LLMProvider]:
     s = get_settings()
-    gemini = GeminiProvider(api_key=s.gemini_api_key, model=s.llm_gemini_model) if s.gemini_api_key else None
+    gemini = (
+        GeminiProvider(api_key=s.gemini_api_key, model=s.llm_gemini_model)
+        if s.gemini_api_key
+        else None
+    )
     zai = ZaiProvider(api_key=s.zai_api_key, model=s.llm_zai_model) if s.zai_api_key else None
-    openai = OpenAIProvider(api_key=s.openai_api_key, model=s.llm_openai_model) if s.openai_api_key else None
+    openai = (
+        OpenAIProvider(api_key=s.openai_api_key, model=s.llm_openai_model)
+        if s.openai_api_key
+        else None
+    )
     chain: list[LLMProvider] = []
     if s.llm_primary_provider == "gemini":
-        if gemini: chain.append(gemini)
-        if zai: chain.append(zai)
-        if openai: chain.append(openai)
+        if gemini:
+            chain.append(gemini)
+        if zai:
+            chain.append(zai)
+        if openai:
+            chain.append(openai)
     elif s.llm_primary_provider == "zai":
-        if zai: chain.append(zai)
-        if gemini: chain.append(gemini)
-        if openai: chain.append(openai)
+        if zai:
+            chain.append(zai)
+        if gemini:
+            chain.append(gemini)
+        if openai:
+            chain.append(openai)
     else:
-        if openai: chain.append(openai)
-        if gemini: chain.append(gemini)
-        if zai: chain.append(zai)
+        if openai:
+            chain.append(openai)
+        if gemini:
+            chain.append(gemini)
+        if zai:
+            chain.append(zai)
     return chain
 
 
@@ -145,7 +163,9 @@ def _classify_error(e: Exception) -> str:
     return "unknown"
 
 
-async def _call_llm(system: str, claim: str, title: str | None, doi: str | None, paper_text: str) -> tuple[dict, str]:
+async def _call_llm(
+    system: str, claim: str, title: str | None, doi: str | None, paper_text: str
+) -> tuple[dict, str]:
     providers = _provider_chain()
     if not providers:
         raise HTTPException(
@@ -163,31 +183,79 @@ async def _call_llm(system: str, claim: str, title: str | None, doi: str | None,
         try:
             data = await provider.extract(system, user_msg, _RESPONSE_SCHEMA)
             elapsed = int((time.perf_counter() - t0) * 1000)
-            log.info("llm_done", elapsed_ms=elapsed, provider=provider.name, chars_sent=len(trimmed), token_estimate=token_est, fallback_step=idx)
+            log.info(
+                "llm_done",
+                elapsed_ms=elapsed,
+                provider=provider.name,
+                chars_sent=len(trimmed),
+                token_estimate=token_est,
+                fallback_step=idx,
+            )
             return data, provider.name
         except PayloadTooLargeError as e:
             last_err = e
-            log.warning("verify_provider_failed", provider=provider.name, error=str(e), error_class=_classify_error(e), chars_sent=len(trimmed), token_estimate=token_est, fallback_step=idx)
+            log.warning(
+                "verify_provider_failed",
+                provider=provider.name,
+                error=str(e),
+                error_class=_classify_error(e),
+                chars_sent=len(trimmed),
+                token_estimate=token_est,
+                fallback_step=idx,
+            )
             retry_chars = max(2_000, len(trimmed) // 2)
             retry_msg = _build_user_msg(claim, title, doi, _trim_for_budget(trimmed, retry_chars))
             retry_est = retry_chars // 4
             try:
                 data = await provider.extract(system, retry_msg, _RESPONSE_SCHEMA)
                 elapsed = int((time.perf_counter() - t0) * 1000)
-                log.info("llm_done", elapsed_ms=elapsed, provider=provider.name, chars_sent=retry_chars, token_estimate=retry_est, fallback_step=idx, retry=True)
+                log.info(
+                    "llm_done",
+                    elapsed_ms=elapsed,
+                    provider=provider.name,
+                    chars_sent=retry_chars,
+                    token_estimate=retry_est,
+                    fallback_step=idx,
+                    retry=True,
+                )
                 return data, provider.name
-            except (PayloadTooLargeError, RateLimitError, ProviderError, json.JSONDecodeError) as e2:
+            except (
+                PayloadTooLargeError,
+                RateLimitError,
+                ProviderError,
+                json.JSONDecodeError,
+            ) as e2:
                 last_err = e2
-                log.warning("verify_provider_failed", provider=provider.name, error=str(e2), error_class=_classify_error(e2), chars_sent=retry_chars, token_estimate=retry_est, fallback_step=idx, retry=True)
+                log.warning(
+                    "verify_provider_failed",
+                    provider=provider.name,
+                    error=str(e2),
+                    error_class=_classify_error(e2),
+                    chars_sent=retry_chars,
+                    token_estimate=retry_est,
+                    fallback_step=idx,
+                    retry=True,
+                )
                 continue
         except (RateLimitError, ProviderError, json.JSONDecodeError) as e:
             last_err = e
-            log.warning("verify_provider_failed", provider=provider.name, error=str(e), error_class=_classify_error(e), chars_sent=len(trimmed), token_estimate=token_est, fallback_step=idx)
+            log.warning(
+                "verify_provider_failed",
+                provider=provider.name,
+                error=str(e),
+                error_class=_classify_error(e),
+                chars_sent=len(trimmed),
+                token_estimate=token_est,
+                fallback_step=idx,
+            )
             continue
 
     raise HTTPException(
         status_code=503,
-        detail={"code": "verify_provider_error", "message": str(last_err or "all providers failed")},
+        detail={
+            "code": "verify_provider_error",
+            "message": str(last_err or "all providers failed"),
+        },
     )
 
 
@@ -208,7 +276,9 @@ async def _llm_verify(
 ) -> tuple[VerifyResponse, str]:
     """Run LLM verification and return a VerifyResponse (no inaccessible here)."""
     try:
-        data, provider = await _call_llm(_SYSTEM_FULLTEXT, req_claim, req_title, req_doi, paper_text)
+        data, provider = await _call_llm(
+            _SYSTEM_FULLTEXT, req_claim, req_title, req_doi, paper_text
+        )
     except json.JSONDecodeError as e:
         log.warning("llm_malformed_json", error=str(e))
         raise HTTPException(status_code=503, detail={"code": "verify_malformed", "message": str(e)})
@@ -261,6 +331,7 @@ def _parse_scope(user_id: str | None, project_id: str | None) -> Scope | None:
 
 # ── POST /v1/verify ──────────────────────────────────────────────────────────
 
+
 @router.post("/verify", response_model=VerifyResponse)
 async def verify(
     req: VerifyRequest,
@@ -269,8 +340,9 @@ async def verify(
     x_rk_project_id: str | None = Header(default=None, alias="X-RK-Project-Id"),
 ) -> VerifyResponse:
     t_start = time.perf_counter()
-    log.info("request", claim=req.claim[:80], doi=req.doi,
-             paper_url=req.paper_url, title=req.paper_title)
+    log.info(
+        "request", claim=req.claim[:80], doi=req.doi, paper_url=req.paper_url, title=req.paper_title
+    )
 
     if not (req.paper_title or req.doi or req.paper_url):
         return VerifyResponse(
@@ -291,9 +363,12 @@ async def verify(
         if cached_verify:
             log.info("verify_cache_hit", cache="verify_result", paper_key=pk)
             return VerifyResponse(
-                status=cached_verify.status, verbatim_quote=cached_verify.verbatim_quote,
-                confidence=cached_verify.confidence, reason=cached_verify.reason,
-                paper_title=req.paper_title, doi=req.doi,
+                status=cached_verify.status,
+                verbatim_quote=cached_verify.verbatim_quote,
+                confidence=cached_verify.confidence,
+                reason=cached_verify.reason,
+                paper_title=req.paper_title,
+                doi=req.doi,
             )
 
     paper_text: str | None = None
@@ -353,12 +428,19 @@ async def verify(
         await s.commit()
 
     total_ms = int((time.perf_counter() - t_start) * 1000)
-    log.info("done", status=result.status, confidence=round(result.confidence, 2),
-             fetch_source=fetch_source, provider=provider, total_ms=total_ms)
+    log.info(
+        "done",
+        status=result.status,
+        confidence=round(result.confidence, 2),
+        fetch_source=fetch_source,
+        provider=provider,
+        total_ms=total_ms,
+    )
     return result
 
 
 # ── POST /v1/verify/upload ───────────────────────────────────────────────────
+
 
 @router.post("/verify/upload", response_model=VerifyResponse)
 async def verify_upload(
@@ -371,8 +453,14 @@ async def verify_upload(
     x_rk_project_id: str | None = Header(default=None, alias="X-RK-Project-Id"),
 ) -> VerifyResponse:
     t_start = time.perf_counter()
-    log.info("upload_request", claim=claim[:80], doi=doi, title=paper_title,
-             filename=pdf.filename, content_type=pdf.content_type)
+    log.info(
+        "upload_request",
+        claim=claim[:80],
+        doi=doi,
+        title=paper_title,
+        filename=pdf.filename,
+        content_type=pdf.content_type,
+    )
 
     pdf_bytes = await pdf.read()
     log.info("upload_received", bytes=len(pdf_bytes))
@@ -398,9 +486,12 @@ async def verify_upload(
         if cached_verify:
             log.info("verify_cache_hit", cache="verify_result_upload", paper_key=pk)
             return VerifyResponse(
-                status=cached_verify.status, verbatim_quote=cached_verify.verbatim_quote,
-                confidence=cached_verify.confidence, reason=cached_verify.reason,
-                paper_title=paper_title, doi=doi,
+                status=cached_verify.status,
+                verbatim_quote=cached_verify.verbatim_quote,
+                confidence=cached_verify.confidence,
+                reason=cached_verify.reason,
+                paper_title=paper_title,
+                doi=doi,
             )
 
     result, provider = await _llm_verify(claim, doi, paper_title, paper_text[:_MAX_TEXT_CHARS])
@@ -420,6 +511,11 @@ async def verify_upload(
         await s.commit()
 
     total_ms = int((time.perf_counter() - t_start) * 1000)
-    log.info("upload_done", status=result.status,
-             confidence=round(result.confidence, 2), provider=provider, total_ms=total_ms)
+    log.info(
+        "upload_done",
+        status=result.status,
+        confidence=round(result.confidence, 2),
+        provider=provider,
+        total_ms=total_ms,
+    )
     return result

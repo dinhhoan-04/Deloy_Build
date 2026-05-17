@@ -20,6 +20,7 @@ CLAIM_FABRICATED = "BERT achieved 99.9% accuracy on ImageNet using zero-shot lea
 
 # ── Unit tests for deterministic helpers ────────────────────────────────────
 
+
 def test_verbatim_score_exact_match():
     chunks = _chunk_text(PAPER_TEXT, window=100, stride=50)
     score = _verbatim_score(CLAIM_EXACT.lower(), chunks)
@@ -33,7 +34,9 @@ def test_verbatim_score_fabricated_low():
 
 
 def test_fact_match_score_all_found():
-    facts = ExtractedFacts(numbers=["93.2"], named_entities=["BERT", "SQuAD v1.1"], key_terms=["F1 score"])
+    facts = ExtractedFacts(
+        numbers=["93.2"], named_entities=["BERT", "SQuAD v1.1"], key_terms=["F1 score"]
+    )
     score = _fact_match_score(facts, PAPER_TEXT)
     assert score == 100.0
 
@@ -59,14 +62,21 @@ def test_chunk_text_returns_non_empty_chunks():
 
 # ── Integration tests with mocked Z.ai and semantic scoring ─────────────────
 
+
 @pytest.mark.asyncio
 async def test_verify_sentence_supported():
-    facts = ExtractedFacts(numbers=["93.2"], named_entities=["BERT", "SQuAD v1.1"], key_terms=["F1 score"])
+    facts = ExtractedFacts(
+        numbers=["93.2"], named_entities=["BERT", "SQuAD v1.1"], key_terms=["F1 score"]
+    )
     llm_resp = {"score": 90, "label": "likely_supported", "reason": "Facts match."}
 
-    with patch("app.services.tier2.verifier.extract_facts", new_callable=AsyncMock, return_value=facts), \
-         patch("app.services.tier2.verifier._semantic_score", return_value=78.0), \
-         patch("app.agents.zai_client.complete_json", new_callable=AsyncMock, return_value=llm_resp):
+    with (
+        patch(
+            "app.services.tier2.verifier.extract_facts", new_callable=AsyncMock, return_value=facts
+        ),
+        patch("app.services.tier2.verifier._semantic_score", return_value=78.0),
+        patch("app.agents.zai_client.complete_json", new_callable=AsyncMock, return_value=llm_resp),
+    ):
         result = await verify_sentence(
             claim=CLAIM_EXACT,
             paper_text=PAPER_TEXT,
@@ -84,7 +94,9 @@ async def test_verify_sentence_supported():
 
 @pytest.mark.asyncio
 async def test_verify_sentence_extraction_failure():
-    with patch("app.services.tier2.verifier.extract_facts", new_callable=AsyncMock, return_value=None):
+    with patch(
+        "app.services.tier2.verifier.extract_facts", new_callable=AsyncMock, return_value=None
+    ):
         result = await verify_sentence(
             claim=CLAIM_EXACT,
             paper_text=PAPER_TEXT,
@@ -100,9 +112,17 @@ async def test_verify_sentence_extraction_failure():
 async def test_verify_sentence_llm_failure_still_returns_score():
     facts = ExtractedFacts(numbers=["93.2"], named_entities=["BERT"], key_terms=["F1"])
 
-    with patch("app.services.tier2.verifier.extract_facts", new_callable=AsyncMock, return_value=facts), \
-         patch("app.services.tier2.verifier._semantic_score", return_value=78.0), \
-         patch("app.agents.zai_client.complete_json", new_callable=AsyncMock, side_effect=Exception("zai down")):
+    with (
+        patch(
+            "app.services.tier2.verifier.extract_facts", new_callable=AsyncMock, return_value=facts
+        ),
+        patch("app.services.tier2.verifier._semantic_score", return_value=78.0),
+        patch(
+            "app.agents.zai_client.complete_json",
+            new_callable=AsyncMock,
+            side_effect=Exception("zai down"),
+        ),
+    ):
         result = await verify_sentence(
             claim=CLAIM_EXACT,
             paper_text=PAPER_TEXT,
@@ -112,4 +132,4 @@ async def test_verify_sentence_llm_failure_still_returns_score():
 
     assert result.status == "verified"
     assert result.score is not None
-    assert result.llm_assessment is None   # graceful degradation
+    assert result.llm_assessment is None  # graceful degradation

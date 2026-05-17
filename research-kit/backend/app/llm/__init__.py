@@ -1,4 +1,5 @@
 """Public surface for extract pipeline."""
+
 from __future__ import annotations
 
 import logging
@@ -36,22 +37,39 @@ class ExtractResult:
 
 def _default_providers() -> list[LLMProvider]:
     s = get_settings()
-    gemini = GeminiProvider(api_key=s.gemini_api_key, model=s.llm_gemini_model) if s.gemini_api_key else None
+    gemini = (
+        GeminiProvider(api_key=s.gemini_api_key, model=s.llm_gemini_model)
+        if s.gemini_api_key
+        else None
+    )
     zai = ZaiProvider(api_key=s.zai_api_key, model=s.llm_zai_model) if s.zai_api_key else None
-    openai = OpenAIProvider(api_key=s.openai_api_key, model=s.llm_openai_model) if s.openai_api_key else None
+    openai = (
+        OpenAIProvider(api_key=s.openai_api_key, model=s.llm_openai_model)
+        if s.openai_api_key
+        else None
+    )
     order: list[LLMProvider] = []
     if s.llm_primary_provider == "gemini":
-        if gemini: order.append(gemini)
-        if zai: order.append(zai)
-        if openai: order.append(openai)
+        if gemini:
+            order.append(gemini)
+        if zai:
+            order.append(zai)
+        if openai:
+            order.append(openai)
     elif s.llm_primary_provider == "zai":
-        if zai: order.append(zai)
-        if gemini: order.append(gemini)
-        if openai: order.append(openai)
+        if zai:
+            order.append(zai)
+        if gemini:
+            order.append(gemini)
+        if openai:
+            order.append(openai)
     else:
-        if openai: order.append(openai)
-        if gemini: order.append(gemini)
-        if zai: order.append(zai)
+        if openai:
+            order.append(openai)
+        if gemini:
+            order.append(gemini)
+        if zai:
+            order.append(zai)
     return order
 
 
@@ -66,7 +84,9 @@ async def extract_via_llm(
     if not chain:
         if providers is not None:
             raise ExtractFailed("no providers in chain (empty list passed explicitly)")
-        raise ExtractFailed("no providers configured (set GEMINI_API_KEY or ZAI_API_KEY or OPENAI_API_KEY)")
+        raise ExtractFailed(
+            "no providers configured (set GEMINI_API_KEY or ZAI_API_KEY or OPENAI_API_KEY)"
+        )
 
     user = build_user(markdown, site, url)
     last_err: Exception | None = None

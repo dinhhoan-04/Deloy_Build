@@ -24,22 +24,34 @@ async def test_goclaw_streams_chat_completion():
 
     async with websockets.connect(ws_url) as ws:
         # Auth — GoClaw RPC: req/res with method+params
-        await ws.send(json.dumps({
-            "type": "req", "id": "1", "method": "connect",
-            "params": {"token": token, "user_id": "smoke-test"},
-        }))
+        await ws.send(
+            json.dumps(
+                {
+                    "type": "req",
+                    "id": "1",
+                    "method": "connect",
+                    "params": {"token": token, "user_id": "smoke-test"},
+                }
+            )
+        )
         resp = json.loads(await ws.recv())
         assert resp.get("ok") is True, f"Auth failed: {resp}"
 
         # Send message
-        await ws.send(json.dumps({
-            "type": "req", "id": "2", "method": "chat.send",
-            "params": {
-                "message": "Reply with the single word OK.",
-                "sessionKey": "rk:smoke:test",
-                "agentId": "rk-verify",
-            },
-        }))
+        await ws.send(
+            json.dumps(
+                {
+                    "type": "req",
+                    "id": "2",
+                    "method": "chat.send",
+                    "params": {
+                        "message": "Reply with the single word OK.",
+                        "sessionKey": "rk:smoke:test",
+                        "agentId": "rk-verify",
+                    },
+                }
+            )
+        )
 
         # Collect events
         async for raw in ws:

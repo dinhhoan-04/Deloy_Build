@@ -5,9 +5,12 @@ import pytest
 async def test_post_runs_returns_201_and_enqueues(client_dev_alice, monkeypatch):
     """Invariant §4.2 #4: idempotent POST returns same run_id; enqueue called once."""
     from app import queue as q
+
     calls: list[str] = []
+
     async def fake_enqueue(redis, run_id):
         calls.append(str(run_id))
+
     monkeypatch.setattr(q, "enqueue_run", fake_enqueue)
 
     body = {"kind": "verify", "input": {"claim_id": "c1"}, "idempotency_key": "k1"}
@@ -32,7 +35,9 @@ async def test_post_runs_persists_provider_model_in_meta(client_dev_alice, monke
     from sqlalchemy import select
     from uuid import UUID
 
-    async def noop(*a, **k): pass
+    async def noop(*a, **k):
+        pass
+
     monkeypatch.setattr(q, "enqueue_run", noop)
 
     body = {
@@ -55,7 +60,10 @@ async def test_post_runs_persists_provider_model_in_meta(client_dev_alice, monke
 @pytest.mark.asyncio
 async def test_post_runs_idem_conflict(client_dev_alice, monkeypatch):
     from app import queue as q
-    async def noop(*a, **k): pass
+
+    async def noop(*a, **k):
+        pass
+
     monkeypatch.setattr(q, "enqueue_run", noop)
     body1 = {"kind": "verify", "input": {"a": 1}, "idempotency_key": "kk"}
     body2 = {"kind": "verify", "input": {"a": 2}, "idempotency_key": "kk"}

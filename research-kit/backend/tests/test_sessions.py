@@ -7,6 +7,7 @@ from rk_shared.models import User
 @pytest.mark.asyncio
 async def test_issue_and_validate_session(db_engine):
     from app.auth.session import SessionService
+
     svc = SessionService(secret="x" * 32, ttl=timedelta(hours=1))
     async with db_engine() as s:
         u = User(google_sub="g1", email="a@b")
@@ -25,6 +26,7 @@ async def test_issue_and_validate_session(db_engine):
 async def test_invalid_token_rejected(db_engine):
     from app.auth.session import SessionService
     from app.errors import AuthError
+
     svc = SessionService(secret="x" * 32, ttl=timedelta(hours=1))
     async with db_engine() as s:
         with pytest.raises(AuthError):

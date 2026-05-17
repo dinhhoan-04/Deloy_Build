@@ -4,6 +4,7 @@ Revision ID: 0001_initial
 Revises:
 Create Date: 2026-05-08 14:00:00.000000
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -65,7 +66,13 @@ def upgrade() -> None:
         sa.Column("page_url", sa.Text(), nullable=True),
         sa.Column("extracted_at", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(),
+            server_default=sa.func.now(),
+            onupdate=sa.func.now(),
+            nullable=False,
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -122,7 +129,12 @@ def upgrade() -> None:
         sa.UniqueConstraint("user_id", "idempotency_key", name="uq_runs_user_idem"),
     )
     op.create_index("ix_runs_user_created", "runs", ["user_id", "created_at"])
-    op.create_index("ix_runs_active", "runs", ["status"], postgresql_where="status in ('queued','running','cancelling')")
+    op.create_index(
+        "ix_runs_active",
+        "runs",
+        ["status"],
+        postgresql_where="status in ('queued','running','cancelling')",
+    )
     op.create_table(
         "run_events",
         sa.Column("id", sa.BigInteger(), nullable=False),
