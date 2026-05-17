@@ -127,12 +127,9 @@ export function serializeDOMToMarkdown(root: Element = document.body): string {
     visited.add(el)
 
     const tag = el.tagName.toLowerCase()
-    let chunk = ''
-    if (tag === 'table') {
-      chunk = serializeTable(el)
-    } else {
-      chunk = serializeList(el, tag === 'ol')
-    }
+    const chunk = tag === 'table'
+      ? serializeTable(el)
+      : serializeList(el, tag === 'ol')
     if (chunk.length > 0) {
       const remaining = MAX_BYTES - bytes
       push(chunk.length > remaining ? chunk.substring(0, remaining) : chunk)
